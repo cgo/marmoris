@@ -1,0 +1,5387 @@
+
+dateiname db 'game3.bld',0
+lppuffer db 4
+	db 0
+	db 4 dup (0)
+handle dw 0
+lpspeicher dw 0
+palname db 'palette',0
+lpdummy db 2
+lpfehler db 'Bitte Marmoris-Diskette einlegen$'
+loadpicture proc
+lp1:
+	mov dx,code
+	mov ds,dx
+	mov ah,12h
+	mov bl,36h
+	mov al,1
+	int 10h
+	mov ah,61
+	mov dx,offset palname
+	mov al,0
+	int 21h
+	jc lpfehlerr
+	mov handle,ax
+	mov lpspeicher,0
+	jmp lploop1
+lpfehlerr:
+        mov ah,12h
+	mov bl,36h
+	mov al,0
+	int 10h
+	call delrow
+	mov ah,9
+	mov dx,offset lpfehler
+	int 21h
+	mov dx,40h
+	mov es,dx
+	mov ax,es:001eh
+	mov es:001ah,ax
+	mov es:001ch,ax
+lpfl:	mov ah,1
+	int 16h
+	jz lpfl
+	mov ah,12h
+	mov bl,36h
+	mov al,1
+	int 10h
+	jmp lp1
+lploop1:
+	mov bx,handle
+	mov ah,63
+	mov cx,3
+	mov dx,offset lppuffer
+	int 21h
+	mov bx,lpspeicher
+	cmp bx,16
+	jae ja_16
+	jmp normal_read
+ja_16:	cmp bx,32
+	jbe ja_32
+	jmp normal_read
+ja_32:	mov dh,lppuffer[2]
+	mov ch,dh
+	mov cl,ch
+	jmp ok__read
+normal_read:
+	mov dh,lppuffer[2]
+	mov ch,lppuffer[3]
+	mov cl,lppuffer[4]
+ok__read:
+        mov ah,10h
+	mov al,10h
+	int 10h
+	inc lpspeicher
+	cmp lpspeicher,255
+	jbe lploop1
+	mov ah,62
+	mov bx,handle
+	int 21h
+	mov bx,64
+	mov cl,255
+	mov ch,255
+	mov dh,255
+yellowl1:
+        mov ah,10h
+	mov al,10h
+	int 10h
+	dec ch
+	dec dh
+	sub cl,4
+	inc bx
+	cmp bx,80
+	jne yellowl1
+greenl2:
+        mov ch,255
+	mov cl,255
+	mov dh,255
+	mov bx,96
+	mov lpdummy,4
+greenl1:
+	mov ah,10h
+	mov al,10h
+	int 10h
+	inc bx
+	dec lpdummy
+	cmp lpdummy,0
+	jne lpnotdec
+	sub ch,3
+	mov lpdummy,4
+lpnotdec:
+        sub cl,3
+	mov dh,cl
+	cmp bx,112
+	jne greenl1
+
+	mov bx,112
+	mov ch,237
+	mov dh,237
+bluel1:
+	mov ah,10h
+	mov al,10h
+	mov cl,255
+	int 10h
+        sub ch,3
+	mov dh,ch
+	inc bx
+	cmp bx,155
+	jne bluel1
+
+	mov bx,89
+	mov dh,165
+	mov ch,4
+	mov cl,255
+col1:	mov ah,10h
+	mov al,10h
+	int 10h
+	add dh,10
+        add ch,10
+	inc bx
+	cmp bx,95
+	jne col1
+
+	mov bx,192
+	mov dh,0
+	mov ch,10
+	mov cl,18
+col2:	mov ah,10h
+	mov al,10h
+	int 10h
+	inc bx
+	add ch,10
+	add cl,8
+	inc dh
+tcol2b: cmp bx,207
+	jne col2
+
+	mov dx,code
+	mov ds,dx
+	mov ah,61
+	mov dx,offset dateiname
+	mov al,00h
+	int 21h
+	jnc nolpfehlerr
+	jmp lpfehlerr
+nolpfehlerr:
+	mov bx,ax
+	mov cx,64000
+	mov ah,63
+	mov dx,screen
+	mov ds,dx
+	mov dx,offset dot
+	int 21h
+	mov ah,62
+	int 21h
+	mov dx,code
+	mov ds,dx
+	mov ah,12h
+	mov bl,36h
+	mov al,0
+	int 10h
+ende:   ret
+loadpicture endp
+
+
+puffer0 db 19950 dup (0)
+
+steinname db 'steine.gme',0
+loadsteine proc
+	mov ah,61
+	mov dx,code
+	mov ds,dx
+	mov dx,offset steinname
+	mov al,0
+	int 21h
+	mov bx,ax
+	mov ah,63
+	mov cx,19950
+	mov dx,offset puffer0
+	int 21h
+	mov ah,62
+	int 21h
+	ret
+loadsteine endp
+
+
+showstein proc
+	mov dx,code
+	mov ds,dx
+	push di
+	push si
+	mov ah,0
+        mov bx,475
+	mul bx
+        mov si,ax
+        mov dx,screen
+	mov es,dx
+	mov di,steinpos
+	mov dh,0
+	mov dl,0
+	jmp showloop1
+showloop2:
+	add di,295
+	mov dl,0
+	inc dh
+showloop1:
+        mov ah,ds:puffer0[si]
+        mov es:dot[di],ah
+	inc si
+	inc di
+	inc dl
+	cmp dl,25
+	jne showloop1
+	cmp dh,18
+	jne showloop2
+	pop si
+	pop di
+        ret
+showstein endp
+level  db 89 dup (?)
+level2 db 89 dup (?)
+level3 db 89 dup (?)
+level4 db 89 dup (?)
+dummy  db 0
+dummy2 db 0
+levelnames db 5000 dup (?)
+levelname	db 14 dup (?)
+llinput db 'Level:','$'
+llerror db 'Fehler im Level ','$'
+level1name db '*.lvl',0
+levelpointer db 0
+lnothing db 0
+nthtext db 'Kein Level gefunden... $'
+DTA	db 43 dup (0)
+rowdel2 db '                      ','$'
+
+tastl2	macro
+	mov dx,40h
+	mov es,dx
+	mov ax,es:001eh
+	mov es:001ah,ax
+	mov es:001ch,ax
+	endm
+
+delrow2 proc
+	push ax
+	push bx
+	push dx
+	mov ah,2
+	mov bh,0
+	mov dh,0
+	mov dl,6
+	int 10h
+	mov dx,offset rowdel2
+	mov ah,9
+	int 21h
+	mov ah,2
+	mov bh,0
+	mov dh,0
+	mov dl,6
+	int 10h
+	pop dx
+	pop bx
+	pop ax
+	ret
+delrow2 endp
+
+load_level proc
+	mov glmem1,10000
+	mov glmem2,10000
+	mov lnothing,0
+	cmp dx,255
+	jne notdislev
+	jmp display_level_2
+notdislev:
+        mov ah,9
+	mov dx,offset llinput
+	int 21h
+llnloop1:
+	mov ah,26
+	mov dx,offset DTA
+	int 21h
+	mov ah,78
+	mov cx,0
+	mov dx,offset level1name
+	int 21h
+	jc nothingfound
+	mov di,0
+neon2:  mov si,30
+neon:	mov dl,DTA[si]
+        inc si
+        mov levelnames[di],dl
+	inc di
+	cmp dl,0
+	je endofname
+	jmp neon
+endofname:
+        mov ah,79
+	int 21h
+	jnc neon2
+	jmp sthfound
+nothingfound:
+	mov dx,code
+	mov ds,dx
+	call delrow
+	mov dx,offset nthtext
+	mov ah,9
+	int 21h
+	tastl2
+nthl1:  mov ah,1
+	int 16h
+	jz nthl1
+	call delrow
+	ret
+sthfound:
+	mov levelnames[di],'$'
+selectlevel:
+	mov si,0
+selloop2:
+	mov di,si
+selloop1:
+	mov dl,levelnames[si]
+	cmp dl,'.'
+	je nextname
+	cmp dl,'$'
+	je selectlevel
+	mov ah,2
+	int 21h
+	inc si
+	jmp selloop1
+nextname:
+	inc si
+	inc si
+	inc si
+	inc si
+	inc si
+	tastl2
+	mov ah,0
+	int 16h
+	cmp al,27
+	jne notendlev
+	call delrow
+	ret
+notendlev:
+	cmp al,13
+	jne notlsel
+        jmp loadselected
+notlsel:
+	cmp al,' '
+	jne nextname
+	call delrow2
+	jmp selloop2
+
+loadselected:
+	mov si,0
+lscloop1:
+        mov al,levelnames[di]
+	mov levelname[si],al
+	inc si
+	inc di
+	cmp al,0
+	jne lscloop1
+	tastl2
+	mov dx,code
+	mov ds,dx
+	mov ah,61
+	mov dx,offset levelname
+	mov al,0
+	int 21h
+	jnc nolllerror
+	jmp lllerror
+nolllerror:
+	mov bx,ax
+	mov ah,63
+	mov cx,8106
+	mov dx,offset glevel
+	int 21h
+	jnc nollllerror
+	jmp lllerror
+nollllerror:
+	mov ah,62
+	int 21h
+	mov al,glevel[8103]
+	mov gypos2,al
+	mov gly,al
+	sub gly,4
+	mov al,glevel[8102]
+	mov gxpos2,al
+	mov glx,al
+	sub glx,4
+	mov dx,255
+	call glcopy
+	mov al,glevel[8100]
+	mov gxpos1,al
+	mov al,glevel[8101]
+	mov gypos1,al
+	mov eballs,0
+	mov si,0
+copyloop2:
+	mov al,glevel[si]
+	mov glevel2[si],al
+	cmp al,8
+	jne llnoball
+	inc eballs
+llnoball:
+	inc si
+	cmp si,8106
+	jne copyloop2
+	mov di,0
+copyloop1:
+	mov al,level[di]
+	mov level4[di],al
+	mov level2[di],al
+	mov level3[di],al
+sobr2:	inc di
+	cmp di,90
+	jne copyloop1
+	jmp display_level_2
+lllerror:
+	mov dl,al
+	mov ah,2
+	int 21h
+        mov dx,offset llerror
+	mov ah,9
+	int 21h
+	mov ah,4ch
+	int 21h
+display_level_2:
+	mov dx,255
+	call glcopy
+	mov steinpos,3876
+        mov di,0
+	mov dummy,0
+	mov dummy2,0
+display_level:
+	mov dx,code
+	mov ds,dx
+        mov al,level[di]
+        call showstein
+        inc di
+	inc dummy
+dl2:	mov al,dummy2
+	xor ah,ah
+	mov bx,6400
+	mul bx
+	add ax,3876
+	push ax
+	mov al,dummy
+	xor ah,ah
+	mov bx,27
+	mul bx
+	pop bx
+	add ax,bx
+	mov steinpos,ax
+	cmp dummy,9
+	jne display_level
+	inc dummy2
+	mov dummy,0
+	cmp dummy2,9
+	jne dl2
+	mov dh,glevel[8100]
+	mov gxpos2,dh
+	mov dh,glevel[8101]
+	mov gypos2,dh
+
+        mov dx,eballs
+	mov balls,dx
+	mov dh,glevel[8102]
+	mov gxpos1,dh
+	mov glx,dh
+	sub glx,4
+	mov dh,glevel[8103]
+	mov gypos1,dh
+	mov gly,dh
+	sub gly,4
+
+	mov position1,41
+
+	mov bl,5
+	xor bh,bh
+	mov ax,27
+	mul bx
+	add ax,36
+	mov xleft1,ax
+	mov bl,4
+	xor bh,bh
+	mov ax,20
+	mul bx
+	add ax,12
+	mov yleft1,ax
+	mov dh,glevel[8104]
+	mov al,dh
+	xor ah,ah
+	mov bl,10
+	mul bl
+	add al,glevel[8105]
+	mov pfanz,al
+	mov ax,eballs
+	mov balls,ax
+	ret
+load_level endp
+
+
+
+
+
+
+
+
+
+
+beenmoving db 0
+laufistop       dw 0
+chx     dw 0
+chy	dw 0
+ws      db 0
+schrcol db 3 dup (0)
+spielerposgl db 0
+testposition3 dw 0
+laufiend dw 0
+addlaufi dw 0
+zeigerdir dw ?
+zeigerposition dw ?
+anfpos dw 0
+deletedirection dw ?
+deletepos dw ?
+uselessb db 0
+testdummy dw ?
+balls   dw 10
+direction dw ?
+bxleft dw ?
+byleft dw ?
+testposition dw ?
+testposition2 dw ?
+move	db 0
+key db 0
+rowpos dw ?
+rowpos2 dw ?
+rowadd dw ?
+whatrow dw ?
+rowdir dw (?)
+endposition dw (?)
+madeittext	db '               Puuhhh !!$'
+level5	db 89 dup (0)
+zeigerpuffer db 500 dup (?)
+ydir	db 0
+xdir	db 0
+yldir   dw 0
+xldir	dw 0
+news	db 0
+vorh1	db 0
+vorh2	db 0
+mom	db 0
+bei13	db 'Bin bei 13 !!$'
+
+geschafft proc
+	mov dateiname[4],'4'
+	call loadpicture
+gesl2:  tastloesch
+	mov ah,0
+	int 16h
+	cmp al,' '
+	jne gesl2
+	mov si,0
+	mov dx,screen
+	mov es,dx
+gesl1:  mov frominit,1
+	call hintergrund
+	call delrow
+	mov news,1
+	ret
+geschafft endp
+
+zsichern	proc
+	push dx
+	push ax
+	push di
+	push si
+	mov dx,screen
+	mov es,dx
+	mov si,zeigerposition
+	mov di,0
+	mov ah,0
+	mov dh,0
+zsl1:	mov al,es:dot[si]
+	mov zeigerpuffer[di],al
+        inc di
+	inc si
+	inc ah
+	cmp ah,25
+	jne zsl1
+	add si,295
+	mov ah,0
+	inc dh
+	cmp dh,20
+	jne zsl1
+	pop si
+	pop di
+	pop ax
+	pop dx
+	ret
+zsichern	endp
+
+zwiederherstellen	proc
+	push dx
+	push ax
+	push di
+	push si
+	mov dx,screen
+	mov es,dx
+	mov si,zeigerposition
+	mov di,0
+	mov ah,0
+	mov dh,0
+zwl1:	mov al,zeigerpuffer[di]
+	mov es:dot[si],al
+	inc di
+	inc si
+	inc ah
+	cmp ah,25
+	jne zwl1
+	add si,295
+	mov ah,0
+	inc dh
+	cmp dh,20
+	jne zwl1
+	pop si
+	pop di
+	pop ax
+	pop dx
+	ret
+zwiederherstellen	endp
+
+zverk	proc
+	push si
+	push ax
+	push di
+	mov si,0
+	mov ax,475
+	mul bx
+	mov di,ax
+zvcl:	mov al,zeigerpuffer[si]
+	add si,17575
+	mov puffer0[si],al
+	sub si,17575
+	inc si
+	cmp si,475
+	jne zvcl
+
+	mov si,0
+zvl:    mov al,puffer0[di]
+	cmp al,0
+	je normalzvl
+	add si,17575
+	mov puffer0[si],al
+	sub si,17575
+	jmp nzvl2
+normalzvl:
+	add si,17575
+        xor puffer0[si],al
+	sub si,17575
+nzvl2:	inc si
+	inc di
+	cmp si,475
+	jne zvl
+	pop di
+	pop ax
+	pop si
+	ret
+zverk	endp
+
+
+
+acidonwall proc
+	mov al,15
+aowl1:	push ax
+	call showstein
+	mov ax,9000
+aowl2:	dec ax
+	cmp ax,0
+	jne aowl2
+        pop ax
+        inc al
+	cmp al,26
+	jne aowl1
+        ret
+acidonwall endp
+
+
+bomb proc
+	cmp rand,0
+	je imfeld
+	jmp bmove2
+imfeld: mov ax,direction
+        mov di,testposition
+	add di,ax
+	cmp level[di],4
+	je monbomb
+	cmp level[di],0
+	jne bnotmove
+	jmp bmove2
+bnotmove:
+	mov beenmoving,0
+notbmove2:
+notbmove3:
+        jmp bnotmove2
+monbomb:
+	mov di,testposition
+	mov level[di],0
+	mov level2[di],0
+	mov level3[di],0
+	add di,direction
+	mov level[di],0
+	mov level2[di],0
+
+destroywall:
+	mov ax,byleft
+	mov bx,320
+	mul bx
+	add ax,bxleft
+	mov testdummy,ax
+	mov level[di],0
+	mov level2[di],0
+	cmp direction,-9
+	je mvonunten
+	cmp direction,9
+	je mvonoben
+	cmp direction,-1
+	jne testmvonlinks
+	jmp mvonrechts
+testmvonlinks:
+        cmp direction,1
+	jne vergisses
+	jmp mvonlinks
+vergisses: ret
+mvonunten:
+
+useful1:
+	cmp ypos,1
+	jne u1w
+	jmp bnotmove2
+u1w:	mov ax,testdummy
+        sub ax,12800
+	mov steinpos,ax
+	call acidonwall
+	mov al,0
+        call showstein
+	jmp bend
+mvonoben:
+useful2:
+	cmp ypos,7
+	jne u2w
+	jmp bnotmove2
+u2w:	add ax,12800
+	mov steinpos,ax
+	call acidonwall
+	mov al,0
+	call showstein
+	jmp bend
+mvonrechts:
+useful3:
+	cmp xpos,1
+	jne u3w
+	jmp glmove1
+u3w:	mov ax,testdummy
+	sub ax,54
+	mov steinpos,ax
+	call acidonwall
+        mov al,0
+	call showstein
+	jmp bend
+mvonlinks:
+useful4:
+	cmp xpos,7
+	jne u4w
+	jmp glmove1
+u4w:	mov ax,testdummy
+        add ax,54
+	mov steinpos,ax
+	call acidonwall
+	mov al,0
+	call showstein
+        jmp bend
+bnotmove2:
+      mov move,0
+	ret
+
+glmove1:
+	mov beenmoving,1
+	mov ax,rand
+	mov bx,direction
+	mul bx
+	mov gldir,ax
+        mov si,position
+	add si,direction
+	mov level[si],0
+	call glcopy
+glnowall:
+	mov si,position
+	add si,direction
+	cmp level[si],0
+	jne endglmove21
+	mov si,position
+	add si,direction
+	mov level[si],1
+	mov ax,byleft
+	mov bx,320
+	mul bx
+	add ax,bxleft
+	mov steinpos,ax
+	mov al,1
+	call showstein
+	jmp neglm
+endglmove21:
+	mov si,position
+	mov level[si],1
+	mov ax,direction
+	sub position,ax
+	mov si,position
+	mov al,mom
+	mov level[si],al
+	mov ax,yleft
+	mov bx,320
+	mul bx
+	add ax,xleft
+	mov steinpos,ax
+	mov al,1
+	push bx
+	push cx
+	push dx
+	call showstein
+	pop dx
+	pop cx
+	pop bx
+        cmp direction,1
+	jne teglm12
+	jmp teglr22
+teglm12: cmp direction,-1
+	jne teglm222
+	jmp tegll22
+teglm222:
+	cmp direction,9
+	jne teglm32
+	jmp teglu22
+teglm32: inc ypos
+	dec gly
+	add yleft,20
+	jmp endglmove
+tegll22: inc xpos
+	dec glx
+	add xleft,27
+	jmp endglmove
+teglr22: dec xpos
+	inc glx
+	sub xleft,27
+	jmp endglmove
+teglu22: dec ypos
+	inc gly
+	sub yleft,20
+	jmp endglmove
+neglm:  cmp direction,1
+	jne eglm1
+	jmp eglr
+eglm1:	cmp direction,-1
+	jne eglm2
+	jmp egll
+eglm2:	cmp direction,9
+	jne eglm3
+	jmp eglu
+eglm3:	dec gypos
+	dec gly
+	jmp endglmove
+egll:	dec gxpos
+	dec glx
+	jmp endglmove
+eglr:	inc gxpos
+	inc glx
+	jmp endglmove
+eglu:	inc gypos
+	inc gly
+endglmove:
+        mov move,0
+	ret
+
+bmove   macro
+	local bbr1,bbr2,bbr3
+	mov di,testposition
+	mov al,0
+bbr2:	mov level[di],al
+	mov level2[di],al
+	mov level3[di],al
+bbr3:	add di,direction
+	mov level[di],1
+	mov level2[di],1
+	mov level3[di],1
+	endm
+
+bmove2: cmp direction,-9
+	je bvonunten
+	cmp direction,-1
+	je bvonrechts
+	cmp direction,1
+	jne notbvonlinks
+	jmp bvonlinks
+notbvonlinks:
+	jmp bvonoben
+bvonunten:
+	cmp gypos,1
+	jne bvu2
+	jmp bnotmove2
+bvu2:	cmp rand,0
+	je notbnotmove3
+	sub byleft,20
+	jmp glmove1
+notbnotmove3:
+	mov ax,320
+	mov bx,byleft
+	mul bx
+	add ax,bxleft
+	sub ax,12800
+	mov steinpos,ax
+	mov al,1
+	call showstein
+	bmove
+	jmp bend
+bvonrechts:
+	cmp gxpos,1
+	jne bvr2
+	jmp bnotmove2
+bvr2:	cmp rand,0
+	je nobnotmove2
+        sub bxleft,27
+	jmp glmove1
+nobnotmove2:
+	mov ax,320
+	mov bx,byleft
+	mul bx
+	add ax,bxleft
+	sub ax,54
+	mov steinpos,ax
+	mov al,1
+	call showstein
+	bmove
+        jmp bend
+bvonlinks:
+	cmp gxpos,89
+	jne bvl2
+	jmp bnotmove2
+bvl2:	cmp rand,0
+	je nobnotmove
+	add bxleft,27
+	jmp glmove1
+nobnotmove:
+	mov ax,320
+	mov bx,byleft
+	mul bx
+	add ax,bxleft
+	add ax,54
+	mov steinpos,ax
+	mov al,1
+	call showstein
+	bmove
+	jmp bend
+bvonoben:
+	cmp gypos,89
+	jne bvo2
+	jmp bnotmove2
+bvo2:	cmp rand,0
+	je nobnotmove3
+	add byleft,20
+	jmp glmove1
+nobnotmove3:
+	mov ax,320
+	mov bx,byleft
+	mul bx
+        add ax,bxleft
+	add ax,12800
+	mov steinpos,ax
+	mov al,1
+	call showstein
+	bmove
+bend:   mov move,1
+	ret
+bomb endp
+
+river proc
+	mov move,0
+	ret
+river endp
+
+wall proc
+	mov move,0
+	ret
+wall endp
+
+match proc
+	cmp rand,0
+	je imfeld2
+	jmp mmove
+imfeld2:
+        mov ax,byleft
+	mov bx,320
+	mul bx
+	add ax,bxleft
+	mov testdummy,ax
+	mov di,testposition
+	add di,direction
+	cmp level[di],0
+	je dommove
+	cmp level[di],6
+	je dommove2
+	jmp mnotmove
+dommove2:
+	cmp ws,11
+	jne ndm2
+	mov move,0
+	ret
+ndm2:	mov level[di],0
+	sub di,direction
+	mov level[di],0
+	mov gldir,0
+	call glcopy
+	mov move,1
+	ret
+dommove:
+mmove:
+	mov di,direction
+	add testposition,di
+        cmp direction,-9
+	je mmovevonunten
+	cmp direction,9
+	je mmovevonoben
+	cmp direction,1
+	jne notmmovevonlinks
+	jmp mmovevonlinks
+notmmovevonlinks:
+	cmp direction,-1
+	jne mmovevonunten
+	jmp mmovevonrechts
+mmovevonunten:
+	cmp gypos,1
+	jne nura
+	jmp mnotmove
+nura:	cmp rand,0
+	je mmve1
+	sub byleft,20
+	jmp glmove2
+mmve1:  mov si,position
+	add si,direction
+        mov level[si],0
+	mov testdummy,ax
+	sub ax,12800
+	mov steinpos,ax
+	mov al,ws
+	call showstein
+	mov di,testposition
+	mov al,ws
+	mov level[di],al
+	mov level2[di],al
+mmml4:
+	jmp mmoveend
+mmovevonoben:
+	cmp gypos,89
+	jne ndra
+	jmp mnotmove
+ndra:	cmp rand,0
+	je mmve2
+	add byleft,20
+	jmp glmove2
+mmve2:  mov si,position
+	add si,direction
+        mov level[si],0
+	mov ax,testdummy
+	add ax,12800
+	mov steinpos,ax
+	mov al,ws
+	call showstein
+	mov di,testposition
+	mov al,ws
+	mov level[di],al
+	mov level2[di],al
+mmml1:	mov level3[di],al
+	jmp mmoveend
+mmovevonlinks:
+	cmp gxpos,89
+	jne nrra
+	jmp mnotmove
+nrra:	cmp rand,0
+	je mmve3
+	add bxleft,27
+	jmp glmove2
+mmve3:  mov si,position
+	add si,direction
+	mov level[si],0
+	mov ax,testdummy
+	add ax,54
+	mov steinpos,ax
+	mov al,ws
+	call showstein
+	mov di,testposition
+	mov al,ws
+	mov level[di],al
+	mov level2[di],al
+mmml2:	mov level3[di],al
+	jmp mmoveend
+mmovevonrechts:
+	cmp gxpos,1
+	jne nlra
+	jmp mnotmove
+nlra:	cmp rand,0
+	je mmve4
+	sub bxleft,27
+	jmp glmove2
+mmve4:  mov si,position
+	add si,direction
+	mov level[si],0
+	mov ax,testdummy
+	sub ax,54
+	mov steinpos,ax
+	mov al,ws
+	call showstein
+	mov di,testposition
+	mov al,ws
+	mov level[di],al
+	mov level2[di],al
+mmml3:	mov level3[di],al
+mmoveend:
+        mov move,1
+	ret
+mnotmove:
+	mov beenmoving,0
+	mov move,0
+	ret
+glmove2:
+	mov beenmoving,1
+	mov ax,rand
+	mov bx,direction
+	mul bx
+	mov gldir,ax
+	mov si,position
+	add si,direction
+	mov level[si],0
+	call glcopy
+	mov si,position
+	add si,direction
+	cmp level[si],0
+	jne endglmove212
+	mov al,ws
+	mov level[si],al
+	mov ax,byleft
+	mov bx,320
+	mul bx
+	add ax,bxleft
+	mov steinpos,ax
+	mov al,ws
+	call showstein
+neglm2:  cmp direction,1
+	jne eglm21
+	jmp eglr2
+eglm21: cmp direction,-1
+	jne eglm22
+	jmp egll2
+eglm22: cmp direction,9
+	jne eglm23
+	jmp eglu2
+eglm23: dec gypos
+	dec gly
+	jmp endglmove2
+egll2:	dec gxpos
+	dec glx
+	jmp endglmove2
+eglr2:	inc gxpos
+	inc glx
+	jmp endglmove2
+eglu2:	inc gypos
+	inc gly
+	jmp endglmove2
+endglmove212:
+	mov si,position
+	mov al,ws
+	mov level[si],al
+	mov level2[si],al
+	mov level3[si],al
+	mov ax,direction
+	sub position,ax
+	mov si,position
+	mov al,mom
+	mov level[si],al
+	mov level2[si],al
+	mov level3[si],al
+	mov ax,yleft
+	mov bx,320
+	mul bx
+	add ax,xleft
+	mov steinpos,ax
+	mov al,ws
+	push bx
+	push cx
+	push dx
+	call showstein
+	pop dx
+	pop cx
+	pop bx
+        cmp direction,1
+	jne eglm12
+	jmp eglr22
+eglm12: cmp direction,-1
+	jne eglm222
+	jmp egll22
+eglm222:
+	cmp direction,9
+	jne eglm32
+	jmp eglu22
+eglm32: inc ypos
+	dec gly
+	add yleft,20
+	jmp endglmove2
+egll22: inc xpos
+	dec glx
+	add xleft,27
+	jmp endglmove2
+eglr22: dec xpos
+	inc glx
+	sub xleft,27
+	jmp endglmove2
+eglu22: dec ypos
+	inc gly
+	sub yleft,20
+
+endglmove2:
+        mov move,0
+	ret
+
+
+match endp
+
+hole proc
+	mov move,0
+	ret
+hole endp
+
+broeckel proc
+	mov move,1
+	mov di,testposition
+	mov level[di],6
+	mov level2[di],6
+	mov mom,6
+	ret
+broeckel endp
+
+ball proc
+	mov di,testposition
+	mov level[di],0
+	mov level2[di],0
+	mov move,1
+	cmp balls,0
+	je endball
+	dec balls
+endball:
+	mov freq,1000
+	mov fiepsl,2000
+	call fieps
+        ret
+ball endp
+
+door proc
+	cmp key,1
+	je got_key
+	jmp enddoor
+got_key:
+	cmp balls,0
+	je allballs
+	jmp enddoor
+allballs:
+	mov freq,6000
+	mov fiepsl,25000
+	call fieps
+	mov freq,4500
+	mov fiepsl,60000
+	call fieps
+        mov move,1
+	mov ah,10h
+	mov al,15h
+	mov bx,7
+	int 10h
+	mov word ptr schrcol,cx
+	mov schrcol[2],dh
+	mov ax,1010h
+	mov bx,7
+	mov ch,0
+	mov cl,10
+	mov dh,0
+	int 10h
+	call delrow
+	mov dx,offset madeittext
+	mov ah,9
+	int 21h
+bl1:	mov bx,7
+	mov ch,0
+	mov cl,10
+	mov dh,0
+bl2:	mov ax,1010h
+	inc cl
+	int 10h
+	mov si,0
+blw1:   inc si
+	cmp si,5000
+	jne blw1
+	cmp cl,50
+	jne bl2
+bl3:	mov ax,1010h
+	dec cl
+	int 10h
+	mov si,0
+blw2:	inc si
+	cmp si,5000
+	jne blw2
+	cmp cl,10
+	jne bl3
+	call delrow
+	mov cx,word ptr schrcol
+	mov dh,schrcol[2]
+	mov ax,1010h
+	mov bx,7
+	int 10h
+	call geschafft
+	jmp enddoor2
+enddoor:
+	mov move,0
+enddoor2:
+        ret
+door endp
+
+keyproc proc
+	mov di,testposition
+	mov level[di],0
+	mov move,1
+	mov key,1
+	ret
+keyproc endp
+
+copystein proc
+	mov di,rowpos2
+	mov al,level[di]
+	mov ah,0
+	mov bx,475
+	mul bx
+	mov si,ax
+	mov di,15200
+rvcl1:	mov dh,puffer0[si]
+        mov puffer0[di],dh
+	inc si
+	inc di
+	cmp di,15676
+	jne rvcl1
+	ret
+copystein endp
+
+changerow proc
+	mov dx,code
+	mov ds,dx
+	cmp spieler,1
+	je nsp
+	jmp sp2
+nsp:	mov ax,0
+	mov al,gypos1
+	mov bx,90
+	mul bx
+	mov bx,0
+	mov bl,gxpos1
+	add ax,bx
+	mov si,ax
+	mov al,glevel[si]
+	mov plc1,al
+
+sp2:	mov ax,0
+	mov al,gypos2
+	mov bx,90
+	mul bx
+	mov bx,0
+	mov bl,gxpos2
+	add ax,bx
+	mov si,ax
+	mov al,glevel[si]
+	mov plc2,al
+
+	mov vorh1,0
+	mov vorh2,0
+
+	mov si,0
+chr:    mov al,level[si]
+	cmp al,13
+	jne cmp13
+	mov vorh1,1
+	mov plp1,si
+	mov al,plc1
+	jmp nz
+cmp13:	cmp al,14
+	jne nz2
+	mov vorh2,1
+	mov plp2,si
+	mov al,plc2
+
+nz:     mov level[si],al
+nz2:	mov level2[si],al
+	inc si
+	cmp si,81
+	jne chr
+        mov si,rowpos2
+	mov di,si
+	add di,deletedirection
+        mov dx,rowpos
+	add dx,rowadd
+	mov steinpos,dx
+changerowloop1:
+	mov al,byte ptr level[si]
+	mov level2[di],al
+	mov level5[di],al
+        push si
+	call showstein
+	pop si
+        mov dx,steinpos
+	add dx,rowadd
+	mov steinpos,dx
+        add si,deletedirection
+	add di,deletedirection
+	dec deletepos
+	cmp deletepos,1
+	je notchangerowloop1
+	jmp changerowloop1
+notchangerowloop1:
+        mov dl,level[si]
+	mov al,level3[si]
+	mov si,rowpos2
+	mov level2[si],dl
+	mov level5[si],al
+	mov al,dl
+	mov si,0
+	mov dx,rowpos
+	mov steinpos,dx
+	call showstein
+	mov si,0
+crl2:	mov al,level2[si]
+crl222: mov level[si],al
+	mov al,level5[si]
+	mov level3[si],al
+	inc si
+	cmp si,81
+	jne crl2
+	mov si,0
+	mov chx,0
+	mov chy,0
+spsl1:	inc chx
+	inc si
+	cmp chx,9
+	jne spnor
+	mov chx,0
+	inc chy
+	cmp chy,9
+	jne spnor
+	jmp endcrl
+spnor:	cmp si,plp1
+	jne ckplp2
+	cmp spieler,2
+	je spsl1
+	jmp shpl1
+ckplp2: cmp si,plp2
+	jne spsl1
+	cmp spieler,1
+	je spsl1
+shpl2:	mov al,14
+	jmp shpl
+shpl1:  mov al,13
+shpl:	push ax
+	mov ax,chy
+	mov bx,6400
+	mul bx
+	mov steinpos,ax
+        mov ax,chx
+        mov bx,27
+	mul bx
+	add steinpos,ax
+	add steinpos,3876
+	pop ax
+	push si
+	call showstein
+	pop si
+	jmp spsl1
+endcrl: mov move,1
+	ret
+changerow endp
+
+
+reiheverschieben proc
+	cmp rowdir,'up'
+	je rowup
+	cmp rowdir,'dn'
+	je rowdn
+	cmp rowdir,'le'
+	je rowle
+	jmp rowri
+rowup:
+	mov deletedirection,+1
+	mov rowadd,+27
+	mov deletepos,9
+        mov ydir,0
+	mov xdir,+1
+	mov xldir,+27
+	mov yldir,0
+	call changerow
+	ret
+rowdn:
+	mov deletedirection,-1
+	mov deletepos,9
+	mov rowadd,-27
+	mov xdir,-1
+	mov ydir,0
+	mov xldir,-27
+	mov yldir,0
+	call changerow
+
+	ret
+rowle:
+	mov deletedirection,-9
+	mov deletepos,9
+	mov rowadd,-6400
+	mov xdir,0
+	mov ydir,-1
+	mov xldir,0
+	mov yldir,-20
+	call changerow
+
+	ret
+rowri:
+	mov deletedirection,+9
+	mov deletepos,9
+	mov rowadd,+6400
+	mov xdir,0
+	mov ydir,+1
+	mov xldir,0
+	mov yldir,+20
+	call changerow
+
+	ret
+reiheverschieben endp
+
+deletedn proc
+	push di
+	push si
+	mov di,deletepos
+	mov si,25
+deleteloop1:
+	add di,15200
+	mov puffer0[di],0
+	sub di,15200
+	dec si
+	add di,deletedirection
+	cmp si,0
+	jne deleteloop1
+	mov deletepos,di
+	pop si
+	pop di
+	ret
+deletedn endp
+
+zeigerverschieben proc
+	mov move,1
+	mov dx,zeigerposition
+	mov steinpos,dx
+	mov al,31
+	call showstein
+        cmp zeigerdir,'up'
+	je zeigerup
+	cmp zeigerdir,'dn'
+	je zeigerdn
+	cmp zeigerdir,'le'
+	jne jmpzeigerri
+	jmp zeigerle
+jmpzeigerri:
+        jmp zeigerri
+zeigerup:
+	sub rowpos,6400
+	cmp rowpos,3847
+	jae normzupoben
+	jmp zupoben
+normzupoben:
+	cmp rowpos,63000
+	jb normzupoben2
+	jmp zupoben
+normzupoben2:
+        sub rowpos2,9
+	mov endposition,62088
+	call zwiederherstellen
+	sub zeigerposition,6400
+	call zsichern
+	mov dx,zeigerposition
+        mov steinpos,dx
+	mov bx,36
+	call zverk
+	mov al,37
+	call showstein
+	mov rowdir,'up'
+	ret
+zeigerdn:
+	add rowpos,6400
+	cmp rowpos,55292
+        jbe normzdnunten
+	jmp zdnunten
+normzdnunten:
+	add rowpos2,9
+	call zwiederherstellen
+	add zeigerposition,6400
+	call zsichern
+zeigerdn2:
+        mov endposition,62300
+	mov dx,zeigerposition
+	mov steinpos,dx
+	mov bx,35
+	call zverk
+	mov al,37
+	call showstein
+	mov rowdir,'dn'
+	mov move,1
+	ret
+zeigerri:
+	add rowpos,27
+	cmp rowpos,4092
+	jbe normzrirechts
+	jmp zrirechts
+normzrirechts:
+	inc rowpos2
+	mov endposition,62048
+	call zwiederherstellen
+        add zeigerposition,27
+	call zsichern
+	mov dx,zeigerposition
+	mov steinpos,dx
+	mov bx,33
+	call zverk
+	mov al,37
+	call showstein
+	mov rowdir,'ri'
+	mov move,1
+	ret
+zeigerle:
+	sub rowpos,27
+	cmp rowpos,55076
+	jae normzlelinks
+	jmp zlelinks
+normzlelinks:
+	dec rowpos2
+	call zwiederherstellen
+	mov endposition,62358
+	sub zeigerposition,27
+	call zsichern
+	mov dx,zeigerposition
+	mov steinpos,dx
+	mov bx,34
+	call zverk
+	mov al,37
+	call showstein
+	mov rowdir,'le'
+	mov move,1
+	ret
+zupoben:
+	mov zeigerdir,'ri'
+	call zwiederherstellen
+	mov zeigerposition,62052
+	sub zeigerposition,27
+	call zsichern
+	mov rowpos,3876
+	sub rowpos,27
+	mov rowpos2,-1
+	mov deletedirection,+9
+	jmp zeigerri
+zdnunten:
+	mov zeigerdir,'le'
+	call zwiederherstellen
+	mov zeigerposition,62332
+        add zeigerposition,27
+	call zsichern
+	mov rowpos,55292
+	add rowpos,27
+	mov rowpos2,81
+	mov deletedirection,-9
+	jmp zeigerle
+zlelinks:
+	mov zeigerdir,'up'
+	call zwiederherstellen
+	mov zeigerposition,55048
+        add zeigerposition,6400
+	call zsichern
+	mov rowpos,55076
+	add rowpos,6400
+	mov rowpos2,81
+	mov deletedirection,+1
+	jmp zeigerup
+zrirechts:
+	mov zeigerdir,'dn'
+	call zwiederherstellen
+	mov zeigerposition,4121
+	call zsichern
+	mov rowpos,4092
+	mov deletedirection,-1
+	jmp zeigerdn2
+zeigerverschieben endp
+
+laufi proc
+        cmp spieler,1
+	jne laspieler2
+laspieler1:
+	mov ax,0
+	mov al,gypos2
+	mov bx,90
+	mul bx
+	mov bx,0
+	mov bl,gxpos2
+	add ax,bx
+	mov si,ax
+	mov testposition3,si
+	mov al,glevel[si]
+	mov spielerposgl,al
+	mov glevel[si],14
+	jmp beginlaufi
+laspieler2:
+	mov ax,0
+	mov al,gypos1
+	mov bx,90
+	mul bx
+	mov bx,0
+	mov bl,gxpos1
+	add ax,bx
+	mov si,ax
+	mov testposition3,si
+	mov al,glevel[si]
+	mov spielerposgl,al
+	mov glevel[si],13
+beginlaufi:
+        mov addlaufi,27
+	mov cx,1
+	mov ax,0
+	mov al,xpos
+	mov laufiend,8
+	sub laufiend,ax
+	mov ax,90
+	mov bh,0
+	mov bl,gxpos
+	sub ax,bx
+	mov laufistop,ax
+	mov dx,1
+	cmp direction,1
+	je normall
+	mov addlaufi,-27
+	mov cx,-1
+	mov ax,0
+	mov al,xpos
+	mov laufiend,ax
+	mov ax,0
+	mov al,gxpos
+	mov laufistop,ax
+	mov dx,-1
+	cmp direction,-1
+	je normall
+	cmp direction,9
+	jne normall2
+	mov ax,0
+	mov al,ypos
+	mov laufiend,8
+	sub laufiend,ax
+	mov ax,90
+	mov bx,0
+	mov bl,gypos
+	sub ax,bx
+	mov laufistop,ax
+	mov dx,1
+	mov addlaufi,6400
+	jmp normall3
+normall2:
+	mov ax,0
+	mov al,ypos
+	mov laufiend,ax
+	mov ax,0
+	mov al,gypos
+        mov laufistop,ax
+	mov dx,-1
+	mov addlaufi,-6400
+normall3:
+        mov ax,direction
+	mov bx,10
+	mul bx
+	mov cx,ax
+normall:
+        mov si,testposition2
+	add si,cx
+	cmp glevel[si],0
+	je normall4
+	mov move,0
+	jmp stoplaufi
+normall4:
+	mov move,1
+        mov si,testposition2
+	mov ax,byleft
+	mov bx,320
+	mul bx
+	add ax,bxleft
+	mov steinpos,ax
+	push si
+	push dx
+	push cx
+	mov al,0
+	call showstein
+	pop cx
+	mov dx,addlaufi
+	add steinpos,dx
+	pop dx
+	mov si,testposition
+	mov level[si],0
+	pop si
+	mov glevel[si],0
+testlaufi:
+	cmp laufiend,0
+	je tl2
+	mov al,12
+	push dx
+	push cx
+	push si
+	call showstein
+	pop si
+	pop cx
+	pop dx
+	dec laufiend
+tl2:	add si,cx
+	cmp glevel[si],0
+	jne stoplaufi
+	mov glevel[si],12
+	sub si,cx
+	mov glevel[si],0
+	add si,cx
+	dec laufistop
+	cmp laufiend,0
+	je tl2
+	mov al,0
+	push dx
+	push cx
+	push si
+        call showstein
+	pop si
+	pop cx
+	mov dx,addlaufi
+	add steinpos,dx
+	pop dx
+	jmp testlaufi
+stoplaufi:
+	mov al,spielerposgl
+	mov si,testposition3
+	mov glevel[si],al
+	mov dx,255
+	call glcopy
+	ret
+laufi endp
+
+testfield proc
+	mov di,testposition
+	mov al,level[di]
+	cmp al,0
+	je wtest11
+	cmp al,1
+	jne wtest2
+        call bomb
+	ret
+wtest2: cmp al,2
+	jne wtest3
+	call river
+	ret
+wtest3: cmp al,3
+	jne wtest4
+	call river
+	ret
+wtest4: cmp al,4
+	jne wtest5
+	call wall
+	ret
+wtest5: cmp al,5
+	jne wtest6
+	mov ws,5
+        call match
+	ret
+wtest6: cmp al,6
+	jne wtest7
+	call hole
+	ret
+wtest7: cmp al,7
+	jne wtest8
+	call broeckel
+	ret
+wtest8: cmp al,8
+	jne wtest9
+	call ball
+	ret
+wtest9: cmp al,9
+	jne wtest10
+	call door
+	ret
+wtest10:
+	cmp al,10
+	jne wtest11
+	call keyproc
+	ret
+wtest11:
+	cmp al,11
+	jne wtest12
+	mov ws,11
+	call match
+	ret
+wtest12:
+	cmp al,12
+	jne wtest13
+                                ;urspr. cmp pfanz,0
+				;urspr. je endwtest13
+	call laufi		;urspr. Reiheverschieben
+	ret
+wtest13:
+	cmp al,38
+	jne wtest132
+	cmp pfanz,0
+	je endwtest13
+	call reiheverschieben
+	dec pfanz
+	ret
+
+wtest132:
+	cmp al,39
+	jne wtest133
+	call zeigerverschieben
+	ret
+
+wtest133:
+        cmp al,13
+	jne wtest14
+	call wall
+	ret
+wtest14:
+	cmp al,26
+	jne wtest142
+	call wall
+	ret
+wtest142:
+        cmp al,14
+	je its14
+	jmp endwtest13
+its14:	call wall
+	ret
+endwtest13:
+	mov mom,0
+        mov move,1
+end13nomove:
+        ret
+testfield endp
+
+testnextfield proc
+	push ax
+	push bx
+	push cx
+	push dx
+	push di
+	push si
+	mov dx,xleft
+	mov bxleft,dx
+	mov dx,yleft
+	mov byleft,dx
+	mov dx,position
+	mov testposition,dx
+	mov ax,direction
+	add testposition,ax
+	mov al,gypos
+	mov ah,0
+	mov bx,90
+	mul bx
+	mov bx,0
+	mov bl,gxpos
+	add ax,bx
+	cmp direction,1
+	jne not1
+is1:	add ax,direction
+	mov testposition2,ax
+        jmp ctest
+not1:	cmp direction,-1
+	je is1
+	mov testposition2,ax
+	mov bx,direction
+	mov ax,10
+	mul bx
+	add testposition2,ax
+ctest:	call testfield
+	mov rand,0
+	mov dx,253
+	call glcopy
+	cmp move,0
+	jne hoereinfachmittestnextauf
+	cmp beenmoving,1
+	je hoereinfachmittestnextauf
+	mov fiepsl,30000
+	mov freq,15000
+	call fieps
+hoereinfachmittestnextauf:
+	mov beenmoving,0
+        pop si
+	pop di
+	pop dx
+	pop cx
+	pop bx
+	pop ax
+	ret
+testnextfield endp
+mgxpos	dw 0
+mgypos  dw 0
+
+findgcoord      proc
+	push es
+	push dx
+	push ax
+	mov dx,code
+	mov es,dx
+        mov ax,0
+	mov al,es:gly
+	add ax,mypos
+	mov mgypos,ax
+	mov ax,0
+	mov al,es:glx
+	add ax,mxpos
+	mov mgxpos,ax
+        pop ax
+	pop dx
+	pop es
+	ret
+findgcoord	endp
+
+
+mi      db 0
+mal	db 0
+mx	dw 0
+my	dw 0
+mypos	dw 0
+mxpos	dw 0
+mstein	db 0
+mstein2 db 0
+mset	db 0
+
+mouseinstalled  proc
+	mov dx,code
+	mov ds,dx
+	mov ax,0
+	int 33h
+	mov mi,1
+	mov ax,1
+	int 33h
+	mov dx,code
+	mov es,dx
+	mov dx,offset mouseproc
+	mov ax,0ch
+	mov cx,1010b
+	int 33h
+	mov steinpos,295
+	mov mal,1
+emil1:  mov al,mal
+	call showstein
+	add steinpos,6400
+	inc mal
+	cmp mal,11
+	jne emil1
+	mov steinpos,10240
+	mov al,38
+	call showstein
+	mov al,39
+	add steinpos,6400
+	call showstein
+	mov al,11
+	add steinpos,6400
+	call showstein
+	mov al,12
+	add steinpos,6400
+	call showstein
+
+	add steinpos,6400
+	mov al,13
+	call showstein
+	add steinpos,6400
+	mov al,14
+	call showstein
+	ret
+;*****************************
+stb	proc
+	cmp mx,550
+	jbe nonotfield
+	jmp notfield
+nonotfield:
+        cmp mx,70
+	jae nonotfield2
+	jmp notfield
+nonotfield2:
+        cmp my,192
+	jbe nonotfield3
+	jmp notfield
+nonotfield3:
+        cmp my,12
+	jae infield
+	jmp notfield
+infield:
+	mov cx,172
+	mov mypos,8
+myloop: cmp my,cx
+	ja mgoty
+	sub cx,20
+	dec mypos
+	jmp myloop
+mgoty:	mov cx,500
+	mov mxpos,8
+mxloop: cmp mx,cx
+	ja mgotx
+	sub cx,54
+	dec mxpos
+	jmp mxloop
+mgotx:  mov dx,code
+	mov es,dx
+	mov ax,mypos
+	mov bx,6400
+	mul bx
+	mov es:steinpos,ax
+	mov ax,mxpos
+	mov bx,27
+	mul bx
+	add es:steinpos,ax
+	add es:steinpos,3876
+
+	mov mset,1
+	mov ax,mypos
+	mov bx,9
+	mul bx
+	add ax,mxpos
+	mov si,ax
+	mov al,mstein
+	mov di,8100
+	cmp al,13
+	je mspla1
+	mov di,8102
+	cmp al,14
+	jne mspla2
+mspla1: call findgcoord
+	mov al,byte ptr mgxpos
+	mov ah,byte ptr mgypos
+	mov es:glevel[di],al
+	inc di
+	mov es:glevel[di],ah
+	jmp noslm1
+mspla2: mov es:level[si],al
+	mov es:level4[si],al
+        mov ax,0
+	mov al,es:gly
+	mov bx,90
+	mul bx
+	mov bx,0
+	mov bl,es:glx
+	add ax,bx
+	mov si,ax
+	mov ax,mypos
+	mov bx,90
+	mul bx
+	add ax,mxpos
+	add si,ax
+	mov al,mstein
+	mov es:glevel[si],al
+noslm1: mov al,mstein
+	call showstein
+
+	ret
+notfield:
+	mov mset,0
+        cmp mx,590
+	ja inauswahl
+	jmp noiam
+inauswahl:
+        mov cx,20
+	mov al,mstein2
+	mov mstein2,1
+coinauswahl:
+	cmp my,cx
+	jb m2goty
+        add cx,20
+	inc mstein2
+	cmp mstein2,11
+	jne coinauswahl
+	mov mstein2,al
+m2goty: ret
+noiam:  cmp mx,54
+	jb inauswahl2
+	jmp endmouse
+inauswahl2:
+        mov cx,52
+	mov al,mstein2
+	mov mstein2,38
+	cmp my,cx
+	jae no13
+	jmp endmouse
+no13:   add cx,20
+	mov mstein2,39
+        cmp my,cx
+	jae no14
+	jmp endmouse
+no14:   add cx,20
+	mov mstein2,11
+	cmp my,cx
+	jae mno38
+	jmp endmouse
+mno38:	add cx,20
+	mov mstein2,12
+	cmp my,cx
+	jae no39
+	jmp endmouse
+no39:   add cx,20
+	mov mstein2,13
+	cmp my,cx
+	jae mno13
+	jmp endmouse
+mno13:	add cx,20
+	mov mstein2,14
+	cmp my,cx
+	jae mno14
+	jmp endmouse
+mno14:	mov mstein2,al
+endmouse:
+        ret
+stb	endp
+
+
+mouseproc	proc
+	push dx
+	mov dx,code
+	mov es,dx
+	pop dx
+	cmp es:mfirst,1
+	jne nomsch
+	mov mstein2,1
+nomsch: mov mx,cx
+	mov my,dx
+	cmp ax,1000b
+	jne mndelete
+	mov mstein,0
+	jmp mterm
+mndelete:
+	mov al,mstein2
+	mov mstein,al
+mterm:	mov ax,2
+	int 33h
+	call stb
+	mov ax,1
+	int 33h
+	mov dx,code
+	mov es,dx
+	mov es:mfirst,0
+	iret
+mouseproc	endp
+
+mouseinstalled	endp
+
+
+editor  proc
+editanf:
+	mov mfirst,1
+	cmp mousie,1
+	jne emni2
+	call mouseinstalled
+emni2:	mov glflag,1
+        mov dx,code
+	mov ds,dx
+	mov gxpos1,1
+	mov gypos1,1
+	mov glx,0
+	mov gly,0
+	mov glzeiger,0
+	mov dx,255
+	call glcopy
+	mov plshown,0
+	call zwiederherstellen
+	mov steinpos,10303
+	mov ypos,1
+	mov xpos,1
+	mov position,10
+	mov xleft,63
+	mov yleft,32
+	jmp estart
+mfirst	db 0
+anzahlreq db 'Anzahl: ','$'
+pfanz3	dw 0
+pfanz	db 0
+nameplease db 'Levelname: ','$'
+elevelname  db 11 dup (0)
+platz	db 2 dup(0)
+lvl	db '.lvl',0
+edummy	dw 0
+eballs	dw 0
+gotanz	db 0
+plshown db 0
+glflag	db 0
+mousie  db 0
+
+cmlshow macro
+local cmls
+	push cx
+	push di
+	push ax
+	mov steinpos,3876
+	mov di,0
+	mov ch,0
+	mov cl,0
+cmls:	mov al,level[di]
+	call showstein
+	add steinpos,27
+	inc di
+	inc ch
+	cmp ch,9
+	jne cmls
+	mov ch,0
+	add steinpos,6157
+	inc cl
+	cmp cl,9
+	jne cmls
+	pop ax
+	pop di
+	pop cx
+        endm
+
+setfield	proc
+        mov di,position
+	mov level4[di],cl
+	mov level[di],cl
+	cmp cl,13
+	je sfend2
+	cmp cl,14
+	je sfend2
+sfend:  mov al,gypos1
+	mov ah,0
+	mov bx,90
+	mul bx
+	mov bx,0
+	mov bl,gxpos1
+	add ax,bx
+	mov si,ax
+	mov glevel[si],cl
+sfend2: ret
+setfield	endp
+
+efeldloesch proc
+	mov al,ypos
+	xor ah,ah
+	mov bx,9
+	mul bx
+	add al,xpos
+	mov position,ax
+	call feldloesch
+	ret
+efeldloesch endp
+
+gldarstellen proc
+	push ax
+	push bx
+	push dx
+	mov ax,0
+	mov al,gly
+	mov bx,90
+	mul bx
+	mov bx,0
+	mov bl,glx
+	add ax,bx
+	mov glzeiger,ax
+	mov dx,255
+	call glcopy
+	call girl
+	pop dx
+	pop bx
+	pop ax
+	ret
+gldarstellen endp
+
+girl proc
+	mov al,cl
+	push si
+	call showstein
+	pop si
+	ret
+girl endp
+
+ecursorhoch	proc
+	push ax
+	mov ax,2
+	int 33h
+	pop ax
+	cmp al,'w'
+	jne echn
+	cmp gly,7
+	jge e1
+	mov ax,1
+	int 33h
+	ret
+e1:
+	sub gly,7
+	sub gypos1,7
+	call gldarstellen
+	mov ax,1
+	int 33h
+	ret
+echn:	cmp ypos,1
+	jbe endech2
+echn2:	call efeldloesch
+	dec ypos
+	dec gypos1
+	sub yleft,20
+	call setlevelkoordinates
+endech: mov ax,1
+	int 33h
+	ret
+endech2:
+	cmp gly,0
+	jne noendech
+	cmp ypos,1
+	je echn2
+	mov ax,1
+	int 33h
+	ret
+noendech:
+        mov gldir,-90
+	call glcopy
+	dec gly
+	dec gypos1
+	mov move,0
+	call girl
+	jmp endech
+ecursorhoch	endp
+
+ecursorunten	proc
+	push ax
+	mov ax,2
+	int 33h
+	pop ax
+	cmp al,'y'
+	jne ecun
+	cmp gly,73
+	jbe e2
+	mov ax,1
+	int 33h
+	ret
+e2:
+	add gly,7
+	add gypos1,7
+	call gldarstellen
+	mov ax,1
+	int 33h
+	ret
+ecun:	cmp ypos,7
+	jae endecu2
+ecun2:	call efeldloesch
+	inc ypos
+	inc gypos1
+	add yleft,20
+	call setlevelkoordinates
+endecu: mov ax,1
+	int 33h
+	ret
+endecu2:
+	cmp gly,81
+	jne noendecu
+	cmp ypos,7
+	je ecun2
+	mov ax,1
+	int 33h
+	ret
+noendecu:
+        mov gldir,90
+	call glcopy
+	inc gly
+	inc gypos1
+	mov move,0
+	call girl
+	jmp endecu
+ecursorunten	endp
+
+ecursorrechts	proc
+	push ax
+	mov ax,2
+	int 33h
+	pop ax
+	cmp al,'s'
+	jne ecur
+	cmp glx,73
+	jbe e3
+	mov ax,1
+	int 33h
+	ret
+e3:
+	add glx,7
+	add gxpos1,7
+	call gldarstellen
+	mov ax,1
+	int 33h
+	ret
+ecur:	cmp xpos,7
+	jae endecr2
+ecur2:	call efeldloesch
+	inc xpos
+	inc gxpos1
+	add xleft,27
+	call setlevelkoordinates
+endecr: mov ax,1
+	int 33h
+	ret
+endecr2:
+	cmp glx,81
+	jne noendecr
+	cmp xpos,7
+	je ecur2
+	mov ax,1
+	int 33h
+	ret
+noendecr:
+        mov gldir,1
+	call glcopy
+	inc glx
+	inc gxpos1
+	mov move,0
+	call girl
+	jmp endecr
+ecursorrechts	endp
+
+ecursorlinks	proc
+	push ax
+	mov ax,2
+	int 33h
+	pop ax
+	cmp al,'a'
+	jne ecul
+	cmp glx,7
+	jge e4
+	mov ax,1
+	int 33h
+	ret
+e4:
+	sub glx,7
+	sub gxpos1,7
+	call gldarstellen
+	mov ax,1
+	int 33h
+	ret
+ecul:	cmp xpos,1
+	jbe endecl2
+ecul2:	call efeldloesch
+	dec xpos
+	dec gxpos1
+	sub xleft,27
+	call setlevelkoordinates
+endecl: mov ax,1
+	int 33h
+	ret
+endecl2:
+	cmp glx,0
+	jne noendecl
+	cmp xpos,1
+	je ecul2
+	mov ax,1
+	int 33h
+	ret
+noendecl:
+        mov gldir,-1
+	call glcopy
+	dec glx
+	dec gxpos1
+	mov move,0
+	call girl
+	jmp endecl
+ecursorlinks	endp
+
+tastloesch macro
+	push dx
+	push ax
+	mov dx,40
+	mov es,dx
+	mov ax,001eh
+	mov es:001ah,ax
+	mov es:001ch,ax
+	pop ax
+	pop dx
+        endm
+
+estart:
+	mov gotanz,0
+	mov cl,1
+	mov al,cl
+	call showstein
+	jmp egetloop1
+rshift: cmp ax,7300h
+	je decrement
+	cmp ax,7400h
+	jne egetloop1
+	cmp cl,14
+	jne incr2
+	mov cl,37
+incr2:  inc cl
+	jmp nodec
+decrement:
+	cmp cl,1
+	je is0
+	cmp cl,38
+	jne odec
+	mov cl,15
+	jmp odec
+is0:    mov cl,39
+	jmp nicht15
+odec:	dec cl
+nodec:
+	cmp cl,40
+	je ist15
+	jmp nicht15
+ist15:	mov cl,1
+nicht15:
+	mov al,cl
+	call showstein
+egetloop1:
+	tastloesch
+	mov ah,0
+	int 16h
+        cmp ax,7300h
+	je rshift
+	cmp ax,7400h
+	je rshift
+notshowplayer:
+	cmp ah,3ch
+	jne notsaveityoufool
+	jmp saveityoufool
+notsaveityoufool:
+	cmp ah,3dh
+	jne nogetanzahl
+	jmp getanzahl
+nogetanzahl:
+	cmp ah,48h
+	jne en1
+	call ecursorhoch
+	jmp egetloop1
+en1:	cmp al,'w'
+	jne enoch
+	call ecursorhoch
+	jmp egetloop1
+enoch:  cmp ah,50h
+	jne eno1
+	call ecursorunten
+	jmp egetloop1
+eno1:	cmp al,'y'
+	jne enocu
+	call ecursorunten
+	jmp egetloop1
+enocu:	cmp ah,4dh
+	jne enocr1
+	call ecursorrechts
+	jmp egetloop1
+enocr1: cmp al,'s'
+	jne enocr
+	call ecursorrechts
+	jmp egetloop1
+enocr:	cmp ah,4bh
+	jne enoc1
+	call ecursorlinks
+	jmp egetloop1
+enoc1:	cmp al,'a'
+	jne enocl
+	call ecursorlinks
+	jmp egetloop1
+enocl:  cmp ah,53h
+	jne enodel
+	jmp edeletelevel
+enodel: cmp ah,4fh
+	jne nichtendeeditor
+	jmp endeeditor
+nichtendeeditor:
+	cmp ah,3bh
+	jne nichtladen
+	jmp eloadalevel
+nichtladen:
+	cmp ah,49h
+	jne nichtladen2
+	call showmap
+	jmp egetloop1
+nichtladen2:
+	cmp ah,3eh
+	jne nichtladen3
+	cmp bvar,26
+	je delbo
+	mov bvar,26
+	call setborder
+	jmp egetloop1
+delbo:	mov bvar,0
+	call setborder
+	jmp egetloop1
+nichtladen3:
+        cmp al,' '
+	jne nee3
+        call setfield
+	call setlevelkoordinates
+	cmp cl,13
+	jne notplayerset
+	jmp playerset
+notplayerset:
+        cmp cl,14
+	jne nee2
+	jmp playerset
+nee3:	cmp al,13
+	jne nee2
+	push cx
+	mov cl,0
+	call setfield
+	call setlevelkoordinates
+	pop cx
+nee2:	jmp egetloop1
+
+setlevelkoordinates	proc
+	mov al,xpos
+	mov bl,ypos
+	xor ah,ah
+	xor bh,bh			;levelkoordinaten berechnen...
+	mov edummy,ax
+	push ax
+	push bx
+	mov ax,9
+	mul bx
+	add ax,edummy
+	mov position,ax
+	pop bx			;und weiter gehts...
+	pop ax
+	mov dx,27
+	mul dx
+	push ax
+	mov ax,bx
+	mov dx,20
+	mul dx
+	mov dx,320
+	mul dx
+	pop bx
+	add ax,bx
+	add ax,3876
+	mov steinpos,ax
+	mov al,cl
+	call showstein
+	ret
+setlevelkoordinates	endp
+
+getanzahl:
+	push ax
+	mov ah,9
+	mov dx,offset anzahlreq
+	int 21h
+	tastloesch
+	mov ah,1
+	int 21h
+	cmp al,13
+	je unendlich
+	sub al,48
+	mov byte ptr glevel[8104],al
+	tastloesch
+	mov ah,1
+	int 21h
+	sub al,48
+	mov byte ptr glevel[8105],al
+endgetanzahl:
+	pop ax
+	call delrow
+	tastloesch
+	jmp egetloop1
+unendlich:
+	mov byte ptr glevel[8104],20
+	mov byte ptr glevel[8105],55
+	jmp endgetanzahl
+
+edeletelevel:
+	push si
+	push dx
+	push cx
+	mov dx,steinpos
+	push dx
+	mov si,0
+edl1:	mov level[si],0
+	mov level2[si],0
+	mov level3[si],0
+	mov level4[si],0
+	inc si
+	cmp si,90
+	jne edl1
+	mov si,0
+edl2:   mov glevel[si],0
+	mov glevel2[si],0
+	inc si
+	cmp si,8106
+	jne edl2
+	mov dx,255
+	call load_level
+	mov glx,0
+	mov gly,0
+	mov gxpos1,1
+	mov gypos1,1
+	mov gypos2,1
+	mov gxpos2,7
+	mov xpos1,1
+	mov ypos1,1
+	mov xpos2,1
+	mov ypos2,7
+	mov glzeiger,0
+	call setborder
+	pop dx
+	mov steinpos,dx
+	pop cx
+	pop dx
+	pop si
+	jmp egetloop1
+playerset:
+	mov dx,code
+	mov ds,dx
+        cmp cl,14
+	je pl2set
+	mov si,8100
+pl1set: mov dh,gxpos1
+	mov dl,gypos1
+        mov glevel[si],dh
+	inc si
+	mov glevel[si],dl
+	jmp egetloop1
+pl2set: mov dh,gxpos1
+	mov dl,gypos1
+        mov si,8102
+	jmp pl1set
+
+eloadalevel:
+	call delrow
+	mov dx,steinpos
+	push dx
+	push cx
+	call load_level
+	pop cx
+	pop dx
+	mov si,0
+	mov steinpos,dx
+	call delrow
+	jmp editanf
+
+saveityoufool:
+	push cx
+	mov dx,steinpos
+	push dx
+	mov gldir,0
+	call glcopy
+	mov ah,9
+	mov dx,offset nameplease
+	int 21h
+	mov si,0
+sloop2: tastloesch
+	mov ah,3
+	mov bh,0
+	int 10h
+	cmp dl,19
+	jbe sloop3
+	dec dl
+	mov ah,2
+	int 10h
+	mov si,8
+sloop3: mov ah,1
+	int 21h
+	cmp al,8
+	jne nbs
+backspace:
+        cmp si,0
+	jne nsloop2
+	mov ah,3
+	mov bh,0
+	int 10h
+	inc dl
+	mov ah,2
+	int 10h
+	jmp sloop2
+nsloop2:
+        mov ah,2
+	mov dl,' '
+	int 21h
+	mov ah,3
+	mov bh,0
+	int 10h
+	mov ah,2
+	dec dl
+	int 10h
+	dec si
+	jmp sloop2
+nbs:	cmp al,27
+	jne sloop4
+	jmp endesave
+sloop4: cmp al,13
+	je namefertig
+	cmp al,48
+	jae mo65
+	jmp sloop2
+mo65:	cmp al,122
+	jbe le122
+	jmp sloop2
+le122:  mov elevelname[si],al
+	inc si
+	jmp sloop2
+namefertig:
+	cmp elevelname,13
+	je endesave
+        mov di,0
+nfertig2:
+	mov al,lvl[di]
+	mov elevelname[si],al
+	inc si
+	inc di
+	cmp di,5
+	jne nfertig2
+
+	mov ah,60
+	mov dx,offset elevelname
+	mov cx,0
+	int 21h
+	mov bx,ax
+	mov ah,64
+	mov cx,8106
+	mov dx,offset glevel
+	int 21h
+	mov ah,62
+	int 21h
+	call delrow
+endesave:
+        pop dx
+	mov steinpos,dx
+	pop cx
+	jmp egetloop1
+endeeditor:
+	cmp mousie,1
+	jne endeenor1
+	mov ax,2
+	int 33h
+	mov frominit,1
+	call hintergrund
+endeenor1:
+        mov si,0
+ecopyloop1:
+	mov al,level4[si]
+	mov level[si],al
+	mov level2[si],al
+	mov level3[si],al
+	inc si
+	cmp si,81
+	jne ecopyloop1
+	mov si,0
+ecopyloop2:
+	mov al,glevel[si]
+	mov glevel2[si],al
+	inc si
+	cmp si,8106
+	jne ecopyloop2
+	mov glflag,0
+	ret
+editor	endp
+
+
+
+intro	proc
+	mov introzeiger,0
+	jmp introstart
+introtext db 'Marmoris',10,13,'$(c) 1991  Christian Gosch und Frederik Armknecht',10,13,'$PC-Grafik: Christian Gosch'
+        db 10,13,'$Idee und Konzept: Frederik Armknecht und Christian Gosch'
+	db 10,13,'$Amiga Version: Frederik Armknecht',10,13,'$PC Version: Christian Gosch'
+	db 10,13,'$Vielen Dank und GrÅ·e an Martin Reuter$&'
+introzeiger  dw 0
+introy	db 0
+introstart:
+	mov dx,code
+	mov ds,dx
+	mov introy,0
+	mov ax,0003h
+	int 10h
+	mov ah,1
+	mov ch,1
+	mov cl,0
+	int 10h
+	mov ah,10h
+	mov al,10h
+	mov bx,7
+	mov ch,0
+	mov dh,0
+	mov cl,0
+	int 10h
+	mov si,0
+	mov di,introzeiger
+introloop1:	cmp introtext[di],'$'
+        je ihabeanzahl
+	inc si
+	inc di
+	jmp introloop1
+ihabeanzahl:
+	mov bx,80
+	sub bx,si
+	shr bx,1
+	mov di,0
+introloop2:  mov ah,2
+	mov dl,' '
+	int 21h
+	inc di
+	cmp di,bx
+	jne introloop2
+
+	mov di,introzeiger
+introloop5:  mov ah,2
+	mov dl,introtext[di]
+	cmp dl,'$'
+	je introtextaus
+	int 21h
+	inc di
+	jmp introloop5
+introtextaus:
+	add introzeiger,si
+	inc introzeiger
+	inc di
+	mov si,0
+	cmp introtext[di],'&'
+	jne introloop1
+
+
+
+
+	mov cx,0
+	mov dh,0
+introloop3:	mov ah,10h
+	mov al,10h
+	mov bx,7
+	int 10h
+	inc cl
+	mov si,2000
+introloop6:	dec si
+	cmp si,0
+	jne introloop6
+	cmp cl,50
+	jne introloop3
+
+	mov dx,40h
+	mov es,dx
+noiende:
+        mov ax,es:001eh
+	mov es:001ah,ax
+	mov es:001ch,ax
+	mov ah,0
+	int 16h
+	cmp al,27
+	jne noiende
+
+introloop7:
+        mov ah,10h
+	mov al,15h
+	mov bx,7
+	int 10h
+	dec cl
+	mov ah,10h
+	mov al,10h
+	mov bx,7
+	int 10h
+	mov si,2000
+introloop8:	dec si
+	cmp si,0
+	jne introloop8
+	cmp cl,0
+	jne introloop7
+iende:	ret
+intro	endpscreen segment at 0a000h
+	dot label byte
+screen ends
+
+code segment
+	assume cs:code,ds:code,es:code
+entry:  mov dx,code
+	mov ds,dx
+	mov ax,0
+	int 33h
+	cmp ax,0ffffh
+	jne gnm
+	mov dx,offset mousetext
+	mov ah,9
+	int 21h
+	mov ah,0
+	int 16h
+	cmp al,'J'
+	jne gnm
+gnm3:	mov mousie,1
+	jmp gnm2
+gnm:    cmp al,'j'
+	je gnm3
+	mov mousie,0
+gnm2:   mov ah,3
+	mov al,5
+	mov bh,255
+	mov bl,1fh
+	int 16h
+	call intro
+	mov ax,0013h
+	int 10h
+	mov news,0
+	mov si,0
+	mov position1,16
+	mov position2,10
+	mov xpos1,7
+	mov ypos1,1
+	mov xpos2,1
+	mov ypos2,1
+	mov gxpos1,7
+	mov gypos1,1
+	mov gxpos2,1
+	mov gypos2,1
+	mov glevel[8100],7
+	mov glevel[8101],1
+	mov glevel[8102],1
+	mov glevel[8103],1
+	mov rand,0
+	jmp read_colors
+mousetext db 'In Ihrem System wurde eine Maus gefunden. Wollen Sie diese',10,13
+		db 'im Marmoris-Editor benutzen ?  $'
+xleft dw 0
+yleft dw 0
+xright dw 0
+yright dw 0
+xleft1 dw 252
+yleft1 dw 12
+xright1 dw 276
+yright1 dw 30
+xleft2 dw 36
+yleft2 dw 12
+xright2 dw 60
+yright2 dw 30
+farbe1	db 0
+farbe2 db 0
+d1farbe db 0
+d2farbe db 0
+position dw 0
+position1 dw 0
+position2 dw 0
+xpos db 0
+ypos db 0
+ypos1 db 0
+xpos1 db 0
+ypos2 db 0
+xpos2 db 0
+spieler db 1
+steinpos dw 0
+zaehler db 0
+anipos	db 0
+deltext db '                                        ','$'
+gldir dw 0
+glzeiger dw 0
+gly db 0
+glx db 0
+gly2 db 0
+glx2 db 0
+gxpos db 0
+gypos db 0
+gxpos1 db 0
+gxpos2 db 0
+gypos1 db 0
+gypos2 db 0
+glevel db 8106 dup (0)
+glevel2 db 8106 dup (0)
+screenpuffer db 8106 dup (?)
+rand dw 0
+glpos1	dw 0
+tglpl db 0
+switchstatus db 128 dup (?)
+plp1	dw 0
+plp2	dw 0
+plc1	db 0
+plc2	db 0
+glmem1  dw 10000
+glmem2	dw 10000
+bvar	db 0
+glxs1	db 0
+glys1	db 0
+glxs2	db 0
+glys2	db 0
+frominit db 0
+
+hintergrund	proc
+	mov ah,12h
+	mov bl,36h
+	mov al,1
+	int 10h
+	mov di,0
+	mov si,0
+	mov steinpos,2560
+hgl:	mov al,12
+	call showstein
+	inc si
+	add steinpos,25
+	cmp si,16
+	jne hgl
+	mov si,0
+	add steinpos,5740
+	inc di
+        cmp di,10
+	jne hgl
+	cmp frominit,1
+	je endhgr
+	mov ah,12h
+	mov bl,36h
+	mov al,0
+	int 10h
+endhgr: mov frominit,0
+	ret
+hintergrund	endp
+
+
+include loadpic.asm
+include loadstei.asm
+include showstei.asm
+include loadleve.asm
+include editor.asm
+include intro.asm
+include fieps.asm         ;fiepsl und freq
+colors1 db 16 dup (?)
+colors2 db 16 dup (?)
+read_colors:
+	mov bvar,26
+	mov glmem1,10000
+	mov glmem2,10000
+	mov glflag,0
+	call loadpicture
+wfi:	tastloesch
+	mov ah,1
+	int 16h
+	cmp al,13
+	jne wfi
+	call loadsteine
+	mov frominit,1
+	call hintergrund
+	call delrow
+	mov dx,255
+	call load_level
+	mov zeigerposition,3848
+	call zsichern
+	call setborder
+	jmp start
+
+setborder	proc
+	push si
+	push di
+	mov si,0
+	mov al,bvar
+setbloop1:
+	mov glevel[si],al
+	mov glevel2[si],al
+	inc si
+	cmp si,90
+	jne setbloop1
+	mov si,0
+	mov di,0
+setbloop2:
+	mov glevel[si],al
+	mov glevel2[si],al
+	add si,90
+	inc di
+	cmp di,90
+	jne setbloop2
+	mov si,8010
+	mov di,0
+setbloop3:
+	mov glevel[si],al
+	mov glevel2[si],al
+	inc si
+	inc di
+	cmp di,90
+	jne setbloop3
+	mov di,0
+	dec si
+setbloop4:
+	mov glevel[si],al
+	mov glevel2[si],al
+	sub si,90
+	inc di
+	cmp di,90
+	jne setbloop4
+	pop di
+	pop si
+        mov dx,255
+	call glcopy
+	ret
+setborder	endp
+
+delrow  proc
+	mov ah,2
+	mov bh,0
+	mov dh,0
+	mov dl,0
+	int 10h
+	mov dx,code
+	mov ds,dx
+	mov ah,9
+	mov dx,offset deltext
+	int 21h
+	mov ah,2
+	mov bh,0
+	mov dx,0
+	int 10h
+        ret
+delrow	endp
+
+zentrieren	proc
+	cmp spieler,1
+	jne zsp2
+	cmp glmem1,10000
+	je znor
+	mov ax,glmem1
+	mov glzeiger,ax
+	mov dx,255
+	call glcopy
+	ret
+zsp2:	cmp glmem2,10000
+	je znor
+	mov ax,glmem2
+	mov glzeiger,ax
+	mov dx,255
+	call glcopy
+	ret
+znor:	cmp gypos,45
+	jbe upper
+	jmp lower
+upper:	cmp gxpos,45
+	jbe l1
+	jmp r1
+l1:     mov al,gxpos
+	dec al
+	mov glx,al
+	mov al,gypos
+	dec al
+	mov gly,al
+	mov position,10
+	mov xleft,63
+	mov yleft,32
+	mov xpos,1
+	mov ypos,1
+	jmp cglcopy
+r1:	mov al,gxpos
+	sub al,7
+	mov glx,al
+	mov al,gypos
+	dec al
+	mov gly,al
+	mov position,16
+	mov xleft,225
+	mov yleft,32
+	mov xpos,7
+	mov ypos,1
+	jmp cglcopy
+lower:	cmp gxpos,45
+	jbe l2
+	jmp r2
+l2:	mov al,gxpos
+	dec al
+	mov glx,al
+	mov al,gypos
+	sub al,7
+	mov gly,al
+	mov position,64
+	mov xpos,1
+	mov ypos,7
+	mov xleft,63
+	mov yleft,152
+	jmp cglcopy
+r2:	mov al,gxpos
+	sub al,7
+	mov glx,al
+	mov al,gypos
+        sub al,7
+        mov gly,al
+	mov position,70
+	mov xpos,7
+	mov ypos,7
+	mov xleft,225
+	mov yleft,152
+cglcopy:
+	mov ax,0
+	mov al,gly
+	mov bx,90
+	mul bx
+	mov dx,0
+	mov dl,glx
+	add ax,dx
+	mov glzeiger,ax
+	mov dx,255
+	call glcopy
+	ret
+zentrieren endp
+
+glcopy	proc
+	push si
+	push di ;Ausschnitt weiterkopieren
+	push ax
+	push dx
+	mov ax,steinpos
+	push ax
+	cmp spieler,1
+	jne spn1
+	mov tglpl,2
+	jmp spn2
+spn1:	mov tglpl,1
+spn2:	cmp dx,255
+	je glcl3
+	cmp dx,256
+	jne noglcl3
+	jmp glcl3
+noglcl3:
+        mov si,glzeiger
+	mov di,0
+	mov ah,0
+glcl1:  mov al,level[di]
+	cmp al,13
+	je tgl4
+	cmp al,14
+	je tgl4
+	mov glevel[si],al
+tgl4:	inc si
+	inc di
+	inc ah
+	cmp ah,9
+	jne glcl1
+	add si,81
+	mov ah,0
+	cmp di,81
+	jne glcl1
+	cmp dx,254
+	jne noeglc2
+	jmp eglc2
+noeglc2:
+	cmp dx,253
+	jne noeglc3
+	jmp endglc
+noeglc3:
+        mov si,glzeiger
+	add si,gldir
+	mov glzeiger,si
+glcl3:	mov si,glzeiger
+	mov di,0
+	mov ah,0
+glcl2:  push ax
+	push bx
+	cmp spieler,2
+	jne do2
+	mov ax,0
+	mov al,gypos1
+	mov bx,90
+	mul bx
+	mov bx,0
+	mov bl,gxpos1
+	add ax,bx
+	mov glpos1,ax
+	jmp do3
+do2:	mov ax,0
+	mov bx,90
+	mov al,gypos2
+	mul bx
+	mov bx,0
+	mov bl,gxpos2
+	add ax,bx
+	mov glpos1,ax
+do3:	pop bx
+	pop ax
+
+	mov al,glevel[si]
+	mov level[di],al
+	cmp glflag,1
+	je tgl2
+	cmp si,glpos1
+	jne tgl2
+	push ax
+	mov ah,15
+	sub ah,tglpl
+	mov level[di],ah
+	pop ax
+tgl2:	inc di
+        inc si
+	inc ah
+	cmp ah,9
+	jne glcl2
+	mov ah,0
+	add si,81
+	cmp di,81
+	jne glcl2
+	cmp dx,256
+	je endglc
+eglc2:	cmlshow
+endglc: mov ax,0
+	mov bx,0
+	mov al,xpos1
+	mov bx,27
+	mul bx
+	add ax,36
+	mov xleft1,ax
+	mov ax,0
+	mov bx,0
+	mov al,ypos1
+	mov bx,20
+	mul bx
+	add ax,12
+	mov yleft1,ax
+	mov ax,0
+	mov bx,0
+	mov al,xpos2
+	mov bx,27
+	mul bx
+	add ax,36
+	mov xleft2,ax
+	mov ax,0
+	mov bx,0
+	mov al,ypos2
+	mov bx,20
+	mul bx
+	add ax,12
+	mov yleft2,ax
+	pop dx
+	mov steinpos,dx
+	pop dx
+	pop ax
+	pop di
+	pop si
+        ret
+glcopy	endp				;und schluss mit dem spass
+
+feldmark proc
+	mov ax,yleft
+	mov bx,320
+	mul bx
+	add ax,xleft
+	mov steinpos,ax
+	cmp spieler,1
+	je spieler1mark
+	mov al,13
+	jmp showspieler
+spieler1mark:
+	mov al,14
+showspieler:
+        call showstein
+	ret
+feldmark endp
+
+feldloesch proc
+	push dx
+	mov dx,code
+	mov ds,dx
+	pop dx
+	mov ax,yleft
+	mov bx,320
+	mul bx
+	add ax,xleft
+	mov steinpos,ax
+	mov di,position
+	mov al,level[di]
+	cmp al,13
+	jae endfl
+	call showstein
+	ret
+endfl:  cmp al,38
+	jne no38
+css:	call showstein
+	ret
+no38:	cmp al,39
+	je css
+	cmp al,26
+	je css
+	ret
+feldloesch endp
+
+set_spieler1 macro
+	mov spieler,1
+	mov ah,ypos1
+        mov ypos,ah
+	mov ah,xpos1
+	mov xpos,ah
+	mov ax,position1
+	mov position,ax
+	mov ax,xright1
+	mov xright,ax
+	mov ax,xleft1
+	mov xleft,ax
+	mov ax,yright1
+	mov yright,ax
+	mov ax,yleft1
+	mov yleft,ax
+	mov al,gypos1
+	mov gypos,al
+	mov al,gxpos1
+	mov gxpos,al
+endm
+
+set_spieler2 macro
+	mov spieler,2
+	mov ah,ypos2
+        mov ypos,ah
+	mov ah,xpos2
+	mov xpos,ah
+	mov ax,position2
+	mov position,ax
+	mov ax,xright2
+	mov xright,ax
+	mov ax,xleft2
+	mov xleft,ax
+	mov ax,yright2
+	mov yright,ax
+	mov ax,yleft2
+	mov yleft,ax
+	mov al,gxpos2
+	mov gxpos,al
+	mov al,gypos2
+	mov gypos,al
+endm
+
+
+write_spieler1 macro
+	mov ah,ypos
+        mov ypos1,ah
+	mov ah,xpos
+	mov xpos1,ah
+	mov ax,position
+	mov position1,ax
+	mov ax,xright
+	mov xright1,ax
+	mov ax,xleft
+	mov xleft1,ax
+	mov ax,yright
+	mov yright1,ax
+	mov ax,yleft
+	mov yleft1,ax
+        mov al,gxpos
+	mov gxpos1,al
+	mov al,gypos
+	mov gypos1,al
+endm
+
+write_spieler2 macro
+	mov ah,ypos
+        mov ypos2,ah
+	mov ah,xpos
+	mov xpos2,ah
+	mov ax,position
+	mov position2,ax
+	mov ax,xright
+	mov xright2,ax
+	mov ax,xleft
+	mov xleft2,ax
+	mov ax,yright
+	mov yright2,ax
+	mov ax,yleft
+	mov yleft2,ax
+	mov al,gypos
+	mov gypos2,al
+	mov al,gxpos
+	mov gxpos2,al
+endm
+
+include testnext.asm
+
+cursor_hoch proc
+	cmp spieler,1
+	je spieler1
+	set_spieler2
+	jmp begin_hoch
+spieler1:
+	set_spieler1
+begin_hoch:
+	cmp ypos,1
+	jne notmoveup
+	jmp moveup
+notmoveup:
+	cmp ypos,0
+	je end_ch
+nmu2:   mov direction,-9
+	call testnextfield
+	cmp move,0
+	jne ch_move
+	jmp end_ch
+
+ch_move: call feldloesch
+
+	dec ypos
+	dec gypos
+        sub yleft,20
+	sub yright,20
+	sub position,9
+end_ch: mov dx,40h
+	mov es,dx
+	mov ax,001eh
+	mov es:001ah,ax
+	mov es:001ch,ax
+	cmp spieler,1
+	je wspieler1
+	write_spieler2
+	jmp ch_end
+wspieler1:
+	write_spieler1
+ch_end:
+	ret
+moveup: cmp gly,0
+	jne noend_ch
+	jmp nmu2
+noend_ch:
+	mov direction,-9
+	mov rand,10
+	call testnextfield
+	cmp move,1
+	je chw
+	jmp end_ch
+chw:
+	mov gldir,-90
+	dec gly
+	dec gypos
+	call glcopy
+	mov move,0
+	jmp end_ch
+cursor_hoch endp
+
+cursor_links proc
+	cmp spieler,1
+	je cl_spieler1
+	set_spieler2
+	jmp begin_cl
+cl_spieler1: set_spieler1
+begin_cl:
+	cmp xpos,1
+	jne cl_weiter1
+	jmp movele
+cl_weiter1:
+	cmp xpos,0
+	je end_cl
+clw2:	mov direction,-1
+	call testnextfield
+	cmp move,1
+	je cl_move
+	jmp cl_end
+cl_move:
+        call feldloesch
+        dec xpos
+	dec gxpos
+	dec position
+	sub xright,27
+	sub xleft,27
+end_cl: cmp spieler,1
+	je cl_wspieler1
+	write_spieler2
+	jmp cl_end
+cl_wspieler1:
+	write_spieler1
+cl_end: mov ax,001eh
+	mov dx,40h
+	mov es,dx
+	mov es:001ah,ax
+	mov es:001ch,ax
+        ret
+movele: cmp glx,0
+	jne noend_cl
+	jmp clw2
+noend_cl:
+	mov rand,1
+	mov direction,-1
+	call testnextfield
+	cmp move,1
+	je wcl
+	jmp end_cl
+wcl:	mov gldir,-1
+	dec glx
+	dec gxpos
+	call glcopy
+	mov move,0
+	jmp end_cl
+cursor_links endp
+
+cursor_rechts proc
+	cmp spieler,1
+	je cr_spieler1
+	set_spieler2
+	jmp begin_cr
+cr_spieler1:
+	set_spieler1
+begin_cr:
+	cmp xpos,7
+	jne notmoveri
+	jmp moveri
+notmoveri:
+	cmp xpos,8
+	je end_cr
+nmr2:	mov direction,1
+	call testnextfield
+	cmp move,1
+	je cr_move
+	jmp cr_end
+cr_move:
+        call feldloesch
+        add xleft,27
+	add xright,27
+	inc position
+	inc xpos
+	inc gxpos
+end_cr:
+	cmp spieler,1
+	je cr_wspieler1
+	write_spieler2
+	jmp cr_end
+cr_wspieler1:
+	write_spieler1
+cr_end: mov dx,40h
+	mov es,dx
+	mov ax,001eh
+	mov es:001ah,ax
+	mov es:001ch,ax
+        ret
+moveri: cmp gxpos,88
+	jne noend_cr
+	jmp nmr2
+noend_cr:
+	mov rand,1
+	mov direction,1
+	call testnextfield
+	cmp move,1
+	je wcr
+	jmp end_cr
+wcr:	mov gldir,1
+	inc glx
+	inc gxpos
+	call glcopy
+	mov move,0
+        jmp end_cr
+cursor_rechts endp
+
+cursor_unten proc
+	cmp spieler,1
+	je cu_spieler1
+	set_spieler2
+	jmp begin_cu
+cu_spieler1:
+	set_spieler1
+begin_cu:
+        cmp ypos,7
+	jne notmovedn
+	jmp movedn
+notmovedn:
+	cmp ypos,8
+	je end_cu
+nmd2:   mov direction,9
+	call testnextfield
+	cmp move,1
+	je cu_move
+	jmp end_cu
+cu_move:
+        call feldloesch
+
+	add position,9
+	inc ypos
+	inc gypos
+	add yleft,20
+	add yright,20
+end_cu: mov dx,40h
+	mov es,dx
+	mov ax,001eh
+	mov es:001ah,ax
+	mov es:001ch,ax
+	cmp spieler,1
+	je cu_wspieler1
+	write_spieler2
+	jmp cu_end
+cu_wspieler1:
+	write_spieler1
+cu_end: ret
+movedn: cmp gypos,88
+	jne noend_cu
+	jmp nmd2
+noend_cu:
+	mov rand,10
+	mov direction,9
+	call testnextfield
+	cmp move,1
+	je wcu
+	jmp end_cu
+wcu:	mov gldir,90
+	inc gly
+	inc gypos
+	call glcopy
+	mov move,0
+	jmp end_cu
+cursor_unten endp
+
+start:					;T H E  B E G I N N I N G . . .
+
+init:                                   ;in the late year 1989...
+        mov glmem1,10000
+	mov glmem2,10000
+	call zwiederherstellen
+	mov zeigerposition,3848
+	call zsichern
+	mov rowpos,3876
+	mov zeigerdir,'up'
+	mov rowdir,'up'
+	mov endposition,62088
+	mov rowpos2,0
+	mov dx,zeigerposition
+	mov steinpos,dx
+	mov bx,36
+	call zverk
+	mov al,37
+	call showstein
+	mov key,0
+	mov ah,12h
+	mov bl,36h
+	mov al,1
+	int 10h
+	set_spieler2
+	call zentrieren
+	write_spieler2
+	set_spieler1
+	call zentrieren
+	write_spieler1
+	mov ah,12h
+	mov bl,36h
+	mov al,0
+	int 10h
+gloop1:
+	mov dx,40h
+	mov es,dx
+	mov ax,001eh
+	mov es:001ah,ax
+	mov es:001ch,ax
+	call feldmark
+	cmp news,1
+	jne waitloop
+	mov news,0
+	jmp newstart
+waitloop:
+waitloop1:
+        mov ah,0
+	int 16h
+zeichen_vorhanden:
+	cmp ah,47h
+	jne nw1
+	jmp newstart
+nw1:	cmp al,27
+	jne noendmar
+	jmp end_marmoris
+noendmar:
+	cmp al,13
+	jne noem2
+	jmp switchpl
+noem2:	cmp ah,3bh
+	jne nw01
+	jmp loadalevel
+nw01:   cmp ah,49h
+	jne nw011
+	call showmap
+	jmp gloop1
+nw011:	cmp ax,5200h
+	jne nw02
+	jmp editalevel
+nw02:
+nw2:	cmp al,0
+	je nw21
+	jmp gloop1
+nw21:	cmp ah,48h
+	jne w1
+	call cursor_hoch
+	jmp gloop1
+w1:	cmp ah,4bh
+	jne w2
+	call cursor_links
+	jmp gloop1
+w2:	cmp ah,4dh
+	jne w3
+	call cursor_rechts
+	jmp gloop1
+w3:	cmp ah,50h
+	je w31
+	jmp gloop1
+w31:	call cursor_unten
+	jmp gloop1
+
+newstart:
+        mov glmem1,10000
+	mov glmem2,10000
+	mov dx,3876
+	mov steinpos,dx
+	mov si,0
+copylevels:
+	mov al,glevel2[si]
+	mov glevel[si],al
+	inc si
+	cmp si,8106
+	jne copylevels
+	mov dx,255
+	call glcopy
+	mov dx,255
+	call load_level
+	mov ax,eballs
+	mov balls,ax
+	mov key,0
+	jmp init
+
+showmap proc
+	push ax
+	push bx
+	push cx
+	push dx
+	push si
+	push di
+	push es
+	push ds
+	cmp mousie,1
+	jne gsmnm
+	mov ax,2
+	int 33h
+gsmnm:	mov ax,0
+	mov al,gypos1
+	mov bx,90
+	mul bx
+	mov bx,0
+	mov bl,gxpos1
+	add ax,bx
+	mov plp1,ax
+	mov si,ax
+	mov al,glevel[si]
+	mov plc1,al
+	mov glevel[si],135
+	mov ax,0
+	mov al,gypos2
+	mov bx,90
+	mul bx
+	mov bx,0
+	mov bl,gxpos2
+	add ax,bx
+	mov plp2,ax
+	mov si,ax
+	mov al,glevel[si]
+	mov plc2,al
+	mov glevel[si],105
+        mov dx,screen
+	mov es,dx
+	mov dx,code
+	mov ds,dx
+	mov di,16757	;3876
+	mov si,0
+	mov ah,0
+	mov dh,0
+sml1:	mov al,es:dot[di]
+	mov ds:screenpuffer[si],al
+	mov dl,glevel[si]
+	cmp dl,4
+	jne sml112
+	mov dl,4
+	jmp sml12
+sml112: cmp dl,8
+	jne sml11
+	mov dl,70
+	jmp sml12
+sml11:  cmp dl,13
+	jne sml121
+        mov dl,110
+	jmp sml12
+sml121: cmp dl,14
+        jne sml123
+	mov dl,150
+	jmp sml12
+sml123: mov al,0
+sml12:	mov es:dot[di],dl
+	inc di
+	inc si
+	inc ah
+	cmp ah,90
+	jne sml1
+	mov ah,0
+	inc dh
+	add di,230
+	cmp dh,90
+	jne sml1
+	tastloesch
+	mov ah,0
+	int 16h
+	mov dx,screen
+	mov es,dx
+	mov si,0
+	mov di,16757
+	mov ah,0
+	mov dh,0
+sml2:	mov al,ds:screenpuffer[si]
+	mov es:dot[di],al
+	inc di
+	inc si
+	inc ah
+	cmp ah,90
+	jne sml2
+	mov ah,0
+	inc dh
+	add di,230
+	cmp dh,90
+	jne sml2
+	mov al,plc1
+	mov si,plp1
+	mov glevel[si],al
+	mov al,plc2
+	mov si,plp2
+	mov glevel[si],al
+	cmp mousie,1
+	jne gsmnm2
+	mov ax,1
+	int 33h
+gsmnm2: pop ds
+	pop es
+	pop di
+	pop si
+	pop dx
+	pop cx
+	pop bx
+	pop ax
+	ret
+showmap endp
+
+switchpl:
+	mov ax,0
+        mov al,gly
+	mov bx,90
+	mul bx
+	mov bx,0
+	mov bl,glx
+	add ax,bx
+	cmp spieler,1
+	jne setpl1
+	jmp setpl2
+setpl1: mov glmem2,ax
+	mov dx,254
+	call glcopy
+	mov al,glx
+	mov glxs2,al
+	mov al,gly
+	mov glys2,al
+	write_spieler2
+	set_spieler1
+	mov al,glxs1
+	mov glx,al
+	mov al,glys1
+	mov gly,al
+	call zentrieren
+	write_spieler1
+jgl1:	jmp gloop1
+setpl2: mov glmem1,ax
+	mov dx,254
+	call glcopy
+	mov al,glx
+	mov glxs1,al
+	mov al,gly
+	mov glys1,al
+	write_spieler1
+	set_spieler2
+	mov al,glxs2
+	mov glx,al
+	mov al,glys2
+	mov gly,al
+	call zentrieren
+        write_spieler2
+jgl12:	jmp gloop1
+
+loadalevel:
+	call zwiederherstellen
+	call delrow
+	mov dx,0
+	call load_level
+	call delrow
+	mov zeigerposition,3848
+	call zsichern
+	mov ax,eballs
+	mov balls,ax
+	mov glmem1,91
+	mov glmem2,91
+	jmp init
+editalevel:
+	call zwiederherstellen
+	call delrow
+	call editor
+	call delrow
+	mov zeigerposition,3848
+	call zsichern
+	jmp init
+end_marmoris:
+	mov dx,40h
+	mov es,dx
+	mov ax,es:001eh
+	mov es:001ah,ax
+	mov es:001ch,ax
+	mov ax,0003h
+	int 10h
+	mov ah,4ch
+	int 21h
+code ends
+        end entry
+freq	dw 0
+fiepsl	dw 0
+fieps proc
+fiepsstart:
+s1:
+	mov di,freq
+	mov bx,3
+	mov al,182
+	out 43h,al
+	mov dx,12h
+
+        mov ax,di
+
+	out 42h,al
+	mov al,ah
+	out 42h,al
+	in al,61h
+	mov ah,al
+	or al,3
+	out 61h,al
+fiepswarte:
+	mov cx,fiepsl
+lab1:	loop lab1
+	dec bx
+	jnz fiepswarte
+
+	mov al,ah
+	out 61h,al
+	ret
+fieps endp
+
+
+screen segment at 0a000h
+	dot label byte
+screen ends
+
+code segment
+	assume cs:code,ds:code,es:code
+entry:  mov dx,code
+	mov ds,dx
+	mov ax,0
+	int 33h
+	cmp ax,0ffffh
+	jne gnm
+	mov dx,offset mousetext
+	mov ah,9
+	int 21h
+	mov ah,0
+	int 16h
+	cmp al,'J'
+	jne gnm
+gnm3:	mov mousie,1
+	jmp gnm2
+gnm:    cmp al,'j'
+	je gnm3
+	mov mousie,0
+gnm2:	mov ah,3
+	mov al,5
+	mov bh,255
+	mov bl,1fh
+	int 16h
+	call intro
+	mov ax,0013h
+	int 10h
+	mov news,0
+	mov si,0
+	mov position1,16
+	mov position2,10
+	mov xpos1,7
+	mov ypos1,1
+	mov xpos2,1
+	mov ypos2,1
+	mov gxpos1,7
+	mov gypos1,1
+	mov gxpos2,1
+	mov gypos2,1
+	mov glevel[8100],7
+	mov glevel[8101],1
+	mov glevel[8102],1
+	mov glevel[8103],1
+	mov rand,0
+	jmp read_colors
+mousetext db 'In Ihrem System wurde eine Maus gefunden. Wollen Sie diese',10,13
+		db 'im Marmoris-Editor benutzen ?  $'
+xleft dw 0
+yleft dw 0
+xright dw 0
+yright dw 0
+xleft1 dw 252
+yleft1 dw 12
+xright1 dw 276
+yright1 dw 30
+xleft2 dw 36
+yleft2 dw 12
+xright2 dw 60
+yright2 dw 30
+farbe1	db 0
+farbe2 db 0
+d1farbe db 0
+d2farbe db 0
+position dw 0
+position1 dw 0
+position2 dw 0
+xpos db 0
+ypos db 0
+ypos1 db 0
+xpos1 db 0
+ypos2 db 0
+xpos2 db 0
+spieler db 1
+steinpos dw 0
+zaehler db 0
+anipos	db 0
+deltext db '                                        ','$'
+gldir dw 0
+glzeiger dw 0
+gly db 0
+glx db 0
+gly2 db 0
+glx2 db 0
+gxpos db 0
+gypos db 0
+gxpos1 db 0
+gxpos2 db 0
+gypos1 db 0
+gypos2 db 0
+glevel db 8106 dup (0)
+glevel2 db 8106 dup (0)
+screenpuffer db 8106 dup (?)
+rand dw 0
+glpos1	dw 0
+tglpl db 0
+plp1	dw 0
+plp2	dw 0
+plc1	db 0
+plc2	db 0
+glmem1  dw 10000
+glmem2	dw 10000
+bvar	db 0
+glxs1	db 0
+glys1	db 0
+glxs2	db 0
+glys2	db 0
+frominit db 0
+
+hintergrund	proc
+	mov ah,12h
+	mov bl,36h
+	mov al,1
+	int 10h
+	mov di,0
+	mov si,0
+	mov steinpos,2560
+hgl:	mov al,12
+	call showstein
+	inc si
+	add steinpos,25
+	cmp si,16
+	jne hgl
+	mov si,0
+	add steinpos,5740
+	inc di
+        cmp di,10
+	jne hgl
+	cmp frominit,1
+	je endhgr
+	mov ah,12h
+	mov bl,36h
+	mov al,0
+	int 10h
+endhgr: mov frominit,0
+	ret
+hintergrund	endp
+
+
+include loadpic.asm
+include loadstei.asm
+include showstei.asm
+include loadleve.asm
+include editor.asm
+include intro.asm
+include fieps.asm         ;fiepsl und freq
+colors1 db 16 dup (?)
+colors2 db 16 dup (?)
+read_colors:
+	mov bvar,26
+	mov glmem1,10000
+	mov glmem2,10000
+	mov glflag,0
+	call loadpicture
+wfi:	tastloesch
+	mov ah,1
+	int 16h
+	cmp al,13
+	jne wfi
+	call loadsteine
+	mov frominit,1
+	call hintergrund
+	call delrow
+	mov dx,255
+	call load_level
+	mov zeigerposition,3848
+	call zsichern
+	call setborder
+	jmp start
+
+setborder	proc
+	push si
+	push di
+	mov si,0
+	mov al,bvar
+setbloop1:
+	mov glevel[si],al
+	mov glevel2[si],al
+	inc si
+	cmp si,90
+	jne setbloop1
+	mov si,0
+	mov di,0
+setbloop2:
+	mov glevel[si],al
+	mov glevel2[si],al
+	add si,90
+	inc di
+	cmp di,90
+	jne setbloop2
+	mov si,8010
+	mov di,0
+setbloop3:
+	mov glevel[si],al
+	mov glevel2[si],al
+	inc si
+	inc di
+	cmp di,90
+	jne setbloop3
+	mov di,0
+	dec si
+setbloop4:
+	mov glevel[si],al
+	mov glevel2[si],al
+	sub si,90
+	inc di
+	cmp di,90
+	jne setbloop4
+	pop di
+	pop si
+        mov dx,255
+	call glcopy
+	ret
+setborder	endp
+
+delrow  proc
+	mov ah,2
+	mov bh,0
+	mov dh,0
+	mov dl,0
+	int 10h
+	mov dx,code
+	mov ds,dx
+	mov ah,9
+	mov dx,offset deltext
+	int 21h
+	mov ah,2
+	mov bh,0
+	mov dx,0
+	int 10h
+        ret
+delrow	endp
+
+zentrieren	proc
+	cmp spieler,1
+	jne zsp2
+	cmp glmem1,10000
+	je znor
+	mov ax,glmem1
+	mov glzeiger,ax
+	mov dx,255
+	call glcopy
+	ret
+zsp2:	cmp glmem2,10000
+	je znor
+	mov ax,glmem2
+	mov glzeiger,ax
+	mov dx,255
+	call glcopy
+	ret
+znor:	cmp gypos,45
+	jbe upper
+	jmp lower
+upper:	cmp gxpos,45
+	jbe l1
+	jmp r1
+l1:     mov al,gxpos
+	mov glx,al
+	mov al,gypos
+	mov gly,al
+	mov position,0
+	mov xleft,36
+	mov yleft,12
+	mov xpos,0
+	mov ypos,0
+	jmp cglcopy
+r1:	mov al,gxpos
+	mov glx,al
+	mov al,gypos
+	mov gly,al
+	mov position,8
+	mov xleft,248
+	mov yleft,12
+	mov xpos,8
+	mov ypos,0
+	jmp cglcopy
+lower:	cmp gxpos,45
+	jbe l2
+	jmp r2
+l2:	mov al,gxpos
+	mov glx,al
+	mov al,gypos
+	mov gly,al
+	mov position,72
+	mov xpos,0
+	mov ypos,8
+	mov xleft,32
+	mov yleft,172
+	jmp cglcopy
+r2:	mov al,gxpos
+	mov glx,al
+	mov al,gypos
+        mov gly,al
+	mov position,89
+	mov xpos,8
+	mov ypos,8
+	mov xleft,252
+	mov yleft,172
+cglcopy:
+	mov ax,0
+	mov al,gly
+	mov bx,90
+	mul bx
+	mov dx,0
+	mov dl,glx
+	add ax,dx
+	mov glzeiger,ax
+	mov dx,255
+	call glcopy
+	ret
+zentrieren endp
+
+glcopy	proc
+	push si
+	push di ;Ausschnitt weiterkopieren
+	push ax
+	push dx
+	mov ax,steinpos
+	push ax
+	cmp spieler,1
+	jne spn1
+	mov tglpl,2
+	jmp spn2
+spn1:	mov tglpl,1
+spn2:	cmp dx,255
+	je glcl3
+	cmp dx,256
+	jne noglcl3
+	jmp glcl3
+noglcl3:
+        mov si,glzeiger
+	mov di,0
+	mov ah,0
+glcl1:  mov al,level[di]
+	cmp al,13
+	je tgl4
+	cmp al,14
+	je tgl4
+	mov glevel[si],al
+tgl4:	inc si
+	inc di
+	inc ah
+	cmp ah,9
+	jne glcl1
+	add si,81
+	mov ah,0
+	cmp di,81
+	jne glcl1
+	cmp dx,254
+	jne noeglc2
+	jmp eglc2
+noeglc2:
+	cmp dx,253
+	jne noeglc3
+	jmp endglc
+noeglc3:
+        mov si,glzeiger
+	add si,gldir
+	mov glzeiger,si
+glcl3:	mov si,glzeiger
+	mov di,0
+	mov ah,0
+glcl2:  push ax
+	push bx
+	cmp spieler,2
+	jne do2
+	mov ax,0
+	mov al,gypos1
+	mov bx,90
+	mul bx
+	mov bx,0
+	mov bl,gxpos1
+	add ax,bx
+	mov glpos1,ax
+	jmp do3
+do2:	mov ax,0
+	mov bx,90
+	mov al,gypos2
+	mul bx
+	mov bx,0
+	mov bl,gxpos2
+	add ax,bx
+	mov glpos1,ax
+do3:	pop bx
+	pop ax
+
+	mov al,glevel[si]
+	mov level[di],al
+	cmp glflag,1
+	je tgl2
+	cmp si,glpos1
+	jne tgl2
+	push ax
+	mov ah,15
+	sub ah,tglpl
+	mov level[di],ah
+	pop ax
+tgl2:	inc di
+        inc si
+	inc ah
+	cmp ah,9
+	jne glcl2
+	mov ah,0
+	add si,81
+	cmp di,81
+	jne glcl2
+	cmp dx,256
+	je endglc
+eglc2:	cmlshow
+endglc: mov ax,0
+	mov bx,0
+	mov al,xpos1
+	mov bx,27
+	mul bx
+	add ax,36
+	mov xleft1,ax
+	mov ax,0
+	mov bx,0
+	mov al,ypos1
+	mov bx,20
+	mul bx
+	add ax,12
+	mov yleft1,ax
+	mov ax,0
+	mov bx,0
+	mov al,xpos2
+	mov bx,27
+	mul bx
+	add ax,36
+	mov xleft2,ax
+	mov ax,0
+	mov bx,0
+	mov al,ypos2
+	mov bx,20
+	mul bx
+	add ax,12
+	mov yleft2,ax
+	pop dx
+	mov steinpos,dx
+	pop dx
+	pop ax
+	pop di
+	pop si
+        ret
+glcopy	endp				;und schluss mit dem spass
+
+feldmark proc
+	mov ax,yleft
+	mov bx,320
+	mul bx
+	add ax,xleft
+	mov steinpos,ax
+	cmp spieler,1
+	je spieler1mark
+	mov al,13
+	jmp showspieler
+spieler1mark:
+	mov al,14
+showspieler:
+        call showstein
+	ret
+feldmark endp
+
+feldloesch proc
+	push dx
+	mov dx,code
+	mov ds,dx
+	pop dx
+	mov ax,yleft
+	mov bx,320
+	mul bx
+	add ax,xleft
+	mov steinpos,ax
+	mov di,position
+	mov al,level[di]
+	cmp al,13
+	jae endfl
+	call showstein
+	ret
+endfl:  cmp al,38
+	jne no38
+css:	call showstein
+	ret
+no38:	cmp al,39
+	je css
+	cmp al,26
+	je css
+	ret
+feldloesch endp
+
+set_spieler1 macro
+	mov spieler,1
+	mov ah,ypos1
+        mov ypos,ah
+	mov ah,xpos1
+	mov xpos,ah
+	mov ax,position1
+	mov position,ax
+	mov ax,xright1
+	mov xright,ax
+	mov ax,xleft1
+	mov xleft,ax
+	mov ax,yright1
+	mov yright,ax
+	mov ax,yleft1
+	mov yleft,ax
+	mov al,gypos1
+	mov gypos,al
+	mov al,gxpos1
+	mov gxpos,al
+endm
+
+set_spieler2 macro
+	mov spieler,2
+	mov ah,ypos2
+        mov ypos,ah
+	mov ah,xpos2
+	mov xpos,ah
+	mov ax,position2
+	mov position,ax
+	mov ax,xright2
+	mov xright,ax
+	mov ax,xleft2
+	mov xleft,ax
+	mov ax,yright2
+	mov yright,ax
+	mov ax,yleft2
+	mov yleft,ax
+	mov al,gxpos2
+	mov gxpos,al
+	mov al,gypos2
+	mov gypos,al
+endm
+
+
+write_spieler1 macro
+	mov ah,ypos
+        mov ypos1,ah
+	mov ah,xpos
+	mov xpos1,ah
+	mov ax,position
+	mov position1,ax
+	mov ax,xright
+	mov xright1,ax
+	mov ax,xleft
+	mov xleft1,ax
+	mov ax,yright
+	mov yright1,ax
+	mov ax,yleft
+	mov yleft1,ax
+        mov al,gxpos
+	mov gxpos1,al
+	mov al,gypos
+	mov gypos1,al
+endm
+
+write_spieler2 macro
+	mov ah,ypos
+        mov ypos2,ah
+	mov ah,xpos
+	mov xpos2,ah
+	mov ax,position
+	mov position2,ax
+	mov ax,xright
+	mov xright2,ax
+	mov ax,xleft
+	mov xleft2,ax
+	mov ax,yright
+	mov yright2,ax
+	mov ax,yleft
+	mov yleft2,ax
+	mov al,gypos
+	mov gypos2,al
+	mov al,gxpos
+	mov gxpos2,al
+endm
+
+include testnext.asm
+
+cursor_hoch proc
+	cmp spieler,1
+	je spieler1
+	set_spieler2
+	jmp begin_hoch
+spieler1:
+	set_spieler1
+begin_hoch:
+	cmp ypos,1
+	jne notmoveup
+	jmp moveup
+notmoveup:
+	cmp ypos,0
+	je end_ch
+nmu2:   mov direction,-9
+	call testnextfield
+	cmp move,0
+	jne ch_move
+	jmp end_ch
+
+ch_move: call feldloesch
+
+	dec ypos
+	dec gypos
+        sub yleft,20
+	sub yright,20
+	sub position,9
+	jmp e_ch2
+end_ch: cmp gly,0
+	je e_ch2
+	jmp noend_ch
+e_ch2:	mov dx,40h
+	mov es,dx
+	mov ax,001eh
+	mov es:001ah,ax
+	mov es:001ch,ax
+	cmp spieler,1
+	je wspieler1
+	write_spieler2
+	jmp ch_end
+wspieler1:
+	write_spieler1
+ch_end:
+	ret
+moveup: cmp gly,0
+	jne noend_ch
+	jmp nmu2
+noend_ch:
+	mov direction,-9
+	mov rand,10
+	call testnextfield
+	cmp move,1
+	je chw
+	jmp e_ch2
+chw:
+	mov gldir,-90
+	dec gly
+	dec gypos
+	call glcopy
+	mov move,0
+	jmp end_ch
+cursor_hoch endp
+
+cursor_links proc
+	cmp spieler,1
+	je cl_spieler1
+	set_spieler2
+	jmp begin_cl
+cl_spieler1: set_spieler1
+begin_cl:
+	cmp xpos,1
+	jne cl_weiter1
+	jmp movele
+cl_weiter1:
+	cmp xpos,0
+	je end_cl
+clw2:	mov direction,-1
+	call testnextfield
+	cmp move,1
+	je cl_move
+	jmp cl_end
+cl_move:
+        call feldloesch
+        dec xpos
+	dec gxpos
+	dec position
+	sub xright,27
+	sub xleft,27
+	jmp e_cl2
+end_cl: cmp glx,0
+	je e_cl2
+	jmp noend_cl
+e_cl2:	cmp spieler,1
+	je cl_wspieler1
+	write_spieler2
+	jmp cl_end
+cl_wspieler1:
+	write_spieler1
+cl_end: mov ax,001eh
+	mov dx,40h
+	mov es,dx
+	mov es:001ah,ax
+	mov es:001ch,ax
+        ret
+movele: cmp glx,0
+	jne noend_cl
+	jmp clw2
+noend_cl:
+	mov rand,1
+	mov direction,-1
+	call testnextfield
+	cmp move,1
+	je wcl
+	jmp e_cl2
+wcl:	mov gldir,-1
+	dec glx
+	dec gxpos
+	call glcopy
+	mov move,0
+	jmp end_cl
+cursor_links endp
+
+cursor_rechts proc
+	cmp spieler,1
+	je cr_spieler1
+	set_spieler2
+	jmp begin_cr
+cr_spieler1:
+	set_spieler1
+begin_cr:
+	cmp xpos,7
+	jne notmoveri
+	jmp moveri
+notmoveri:
+	cmp xpos,8
+	je end_cr
+nmr2:	mov direction,1
+	call testnextfield
+	cmp move,1
+	je cr_move
+	jmp cr_end
+cr_move:
+        call feldloesch
+        add xleft,27
+	add xright,27
+	inc position
+	inc xpos
+	inc gxpos
+	jmp e_cr2
+end_cr: cmp glx,89
+	je e_cr2
+	jmp noend_cr
+e_cr2:	cmp spieler,1
+	je cr_wspieler1
+	write_spieler2
+	jmp cr_end
+cr_wspieler1:
+	write_spieler1
+cr_end: mov dx,40h
+	mov es,dx
+	mov ax,001eh
+	mov es:001ah,ax
+	mov es:001ch,ax
+        ret
+moveri: cmp gxpos,88
+	jne noend_cr
+	jmp nmr2
+noend_cr:
+	mov rand,1
+	mov direction,1
+	call testnextfield
+	cmp move,1
+	je wcr
+	jmp e_cr2
+wcr:	mov gldir,1
+	inc glx
+	inc gxpos
+	call glcopy
+	mov move,0
+        jmp end_cr
+cursor_rechts endp
+
+cursor_unten proc
+	cmp spieler,1
+	je cu_spieler1
+	set_spieler2
+	jmp begin_cu
+cu_spieler1:
+	set_spieler1
+begin_cu:
+        cmp ypos,7
+	jne notmovedn
+	jmp movedn
+notmovedn:
+	cmp ypos,8
+	je end_cu
+nmd2:   mov direction,9
+	call testnextfield
+	cmp move,1
+	je cu_move
+	jmp end_cu
+cu_move:
+        call feldloesch
+
+	add position,9
+	inc ypos
+	inc gypos
+	add yleft,20
+	add yright,20
+	jmp e_cu2
+end_cu: cmp gly,89
+	je e_cu2
+	jmp noend_cu
+e_cu2:	mov dx,40h
+	mov es,dx
+	mov ax,001eh
+	mov es:001ah,ax
+	mov es:001ch,ax
+	cmp spieler,1
+	je cu_wspieler1
+	write_spieler2
+	jmp cu_end
+cu_wspieler1:
+	write_spieler1
+cu_end: ret
+movedn: cmp gypos,88
+	jne noend_cu
+	jmp nmd2
+noend_cu:
+	mov rand,10
+	mov direction,9
+	call testnextfield
+	cmp move,1
+	je wcu
+	jmp e_cu2
+wcu:	mov gldir,90
+	inc gly
+	inc gypos
+	call glcopy
+	mov move,0
+	jmp end_cu
+cursor_unten endp
+
+start:					;T H E  B E G I N N I N G . . .
+
+init:                                   ;in the late year 1989...
+        mov glmem1,10000
+	mov glmem2,10000
+	call zwiederherstellen
+	mov zeigerposition,3848
+	call zsichern
+	mov rowpos,3876
+	mov zeigerdir,'up'
+	mov rowdir,'up'
+	mov endposition,62088
+	mov rowpos2,0
+	mov dx,zeigerposition
+	mov steinpos,dx
+	mov bx,36
+	call zverk
+	mov al,37
+	call showstein
+	mov key,0
+	mov ah,12h
+	mov bl,36h
+	mov al,1
+	int 10h
+	set_spieler2
+	call zentrieren
+	write_spieler2
+	set_spieler1
+	call zentrieren
+	write_spieler1
+	mov ah,12h
+	mov bl,36h
+	mov al,0
+	int 10h
+gloop1:
+	mov dx,40h
+	mov es,dx
+	mov ax,001eh
+	mov es:001ah,ax
+	mov es:001ch,ax
+	call feldmark
+	cmp news,1
+	jne waitloop
+	mov news,0
+	jmp newstart
+waitloop:
+waitloop1:
+        mov ah,0
+	int 16h
+zeichen_vorhanden:
+	cmp ah,47h
+	jne nw1
+	jmp newstart
+nw1:	cmp al,27
+	jne noendmar
+	jmp end_marmoris
+noendmar:
+	cmp al,13
+	jne noem2
+	jmp switchpl
+noem2:	cmp ah,3bh
+	jne nw01
+	jmp loadalevel
+nw01:   cmp ah,49h
+	jne nw011
+	call showmap
+	jmp gloop1
+nw011:	cmp ax,5200h
+	jne nw02
+	jmp editalevel
+nw02:
+nw2:	cmp al,0
+	je nw21
+	jmp gloop1
+nw21:	cmp ah,48h
+	jne w1
+	call cursor_hoch
+	jmp gloop1
+w1:	cmp ah,4bh
+	jne w2
+	call cursor_links
+	jmp gloop1
+w2:	cmp ah,4dh
+	jne w3
+	call cursor_rechts
+	jmp gloop1
+w3:	cmp ah,50h
+	je w31
+	jmp gloop1
+w31:	call cursor_unten
+	jmp gloop1
+
+newstart:
+        mov glmem1,10000
+	mov glmem2,10000
+	mov dx,3876
+	mov steinpos,dx
+	mov si,0
+copylevels:
+	mov al,glevel2[si]
+	mov glevel[si],al
+	inc si
+	cmp si,8106
+	jne copylevels
+	mov dx,255
+	call glcopy
+	mov dx,255
+	call load_level
+	mov ax,eballs
+	mov balls,ax
+	mov key,0
+	jmp init
+
+showmap proc
+	push ax
+	push bx
+	push cx
+	push dx
+	push si
+	push di
+	push es
+	push ds
+	cmp mousie,1
+	jne gsmnm
+	mov ax,2
+	int 33h
+gsmnm:	mov ax,0
+	mov al,gypos1
+	mov bx,90
+	mul bx
+	mov bx,0
+	mov bl,gxpos1
+	add ax,bx
+	mov plp1,ax
+	mov si,ax
+	mov al,glevel[si]
+	mov plc1,al
+	mov glevel[si],135
+	mov ax,0
+	mov al,gypos2
+	mov bx,90
+	mul bx
+	mov bx,0
+	mov bl,gxpos2
+	add ax,bx
+	mov plp2,ax
+	mov si,ax
+	mov al,glevel[si]
+	mov plc2,al
+	mov glevel[si],105
+        mov dx,screen
+	mov es,dx
+	mov dx,code
+	mov ds,dx
+	mov di,16757	;3876
+	mov si,0
+	mov ah,0
+	mov dh,0
+sml1:	mov al,es:dot[di]
+	mov ds:screenpuffer[si],al
+	mov dl,glevel[si]
+	cmp dl,4
+	jne sml112
+	mov dl,4
+	jmp sml12
+sml112: cmp dl,8
+	jne sml11
+	mov dl,70
+	jmp sml12
+sml11:  cmp dl,13
+	jne sml121
+        mov dl,110
+	jmp sml12
+sml121: cmp dl,14
+        jne sml123
+	mov dl,150
+	jmp sml12
+sml123: mov al,0
+sml12:	mov es:dot[di],dl
+	inc di
+	inc si
+	inc ah
+	cmp ah,90
+	jne sml1
+	mov ah,0
+	inc dh
+	add di,230
+	cmp dh,90
+	jne sml1
+	tastloesch
+	mov ah,0
+	int 16h
+	mov dx,screen
+	mov es,dx
+	mov si,0
+	mov di,16757
+	mov ah,0
+	mov dh,0
+sml2:	mov al,ds:screenpuffer[si]
+	mov es:dot[di],al
+	inc di
+	inc si
+	inc ah
+	cmp ah,90
+	jne sml2
+	mov ah,0
+	inc dh
+	add di,230
+	cmp dh,90
+	jne sml2
+	mov al,plc1
+	mov si,plp1
+	mov glevel[si],al
+	mov al,plc2
+	mov si,plp2
+	mov glevel[si],al
+	cmp mousie,1
+	jne gsmnm2
+	mov ax,1
+	int 33h
+gsmnm2: pop ds
+	pop es
+	pop di
+	pop si
+	pop dx
+	pop cx
+	pop bx
+	pop ax
+	ret
+showmap endp
+
+switchpl:
+	mov ax,0
+        mov al,gly
+	mov bx,90
+	mul bx
+	mov bx,0
+	mov bl,glx
+	add ax,bx
+	cmp spieler,1
+	jne setpl1
+	jmp setpl2
+setpl1: mov glmem2,ax
+	mov dx,254
+	call glcopy
+	mov al,glx
+	mov glxs2,al
+	mov al,gly
+	mov glys2,al
+	write_spieler2
+	set_spieler1
+	mov al,glxs1
+	mov glx,al
+	mov al,glys1
+	mov gly,al
+	call zentrieren
+	write_spieler1
+jgl1:	jmp gloop1
+setpl2: mov glmem1,ax
+	mov dx,254
+	call glcopy
+	mov al,glx
+	mov glxs1,al
+	mov al,gly
+	mov glys1,al
+	write_spieler1
+	set_spieler2
+	mov al,glxs2
+	mov glx,al
+	mov al,glys2
+	mov gly,al
+	call zentrieren
+        write_spieler2
+jgl12:	jmp gloop1
+
+loadalevel:
+	call zwiederherstellen
+	call delrow
+	mov dx,0
+	call load_level
+	call delrow
+	mov zeigerposition,3848
+	call zsichern
+	mov ax,eballs
+	mov balls,ax
+	mov glmem1,91
+	mov glmem2,91
+	jmp init
+editalevel:
+	call zwiederherstellen
+	call delrow
+	call editor
+	call delrow
+	mov zeigerposition,3848
+	call zsichern
+	jmp init
+end_marmoris:
+	mov dx,40h
+	mov es,dx
+	mov ax,es:001eh
+	mov es:001ah,ax
+	mov es:001ch,ax
+	mov ax,0003h
+	int 10h
+	mov ah,4ch
+	int 21h
+code ends
+        end entry
+

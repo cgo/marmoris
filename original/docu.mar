@@ -1,0 +1,25 @@
+Tastenbelegung:
+
+Cursortasten:   Figurbewegung
+PageUp: Karte des Levels
+Home:	Neubeginn
+Insert:  -> Editor
+Return: Spieler umschalten
+F1:	Level laden (Auswahl mit Freizeichen/laden mit Return)
+
+Editor:
+
+Cursortasten:   Steinbewegung
+Control+Cursortasten links/rechts bzw. Mausklick:   Stein ausw„hlen
+w / y / a / s:   groáer Schritt (8 Felder weiter)
+Delete: Level l”schen
+End:	-> Spielmodus
+Return bzw. rechte Maustaste: Feld l”schen
+Freizeichen bzw. linke Maustaste:	Feld setzen
+F1:	Level laden	(Auswahl mit Freizeichen/laden mit Return)
+F2:	Level speichern
+F3:	Anzahl der Reiheverschiebungen festlegen
+	(2 Ziffern oder Return fr keine Begrenzung)
+F4:	Randbegrenzung setzen/l”schen
+
+

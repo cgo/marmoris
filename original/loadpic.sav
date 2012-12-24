@@ -1,0 +1,59 @@
+
+loadpicture proc
+lp1:
+	mov dx,daten
+	mov ds,dx
+	mov ah,12h
+	mov bl,36h
+	mov al,1
+	int 10h
+	mov ah,61
+	mov dx,offset palette
+	mov al,0
+	int 21h
+	jc lpfehlerr
+	mov bx,ax
+	mov ah,62
+	int 21h
+	jmp lploop1
+lpfehlerr:
+        mov ah,12h
+	mov bl,36h
+	mov al,0
+	int 10h
+	mov dx,code
+	mov ds,dx
+	call delrow
+	mov dx,daten
+	mov ds,dx
+	mov ah,9
+	mov dx,offset lpfehler
+	int 21h
+	mov dx,40h
+	mov es,dx
+	mov ax,es:001eh
+	mov es:001ah,ax
+	mov es:001ch,ax
+lpfl:	mov ah,1
+	int 16h
+	jz lpfl
+	mov ah,12h
+	mov bl,36h
+	mov al,1
+	int 10h
+	jmp lp1
+lploop1:
+        call load_palette
+	call unpak
+
+	mov dx,code
+	mov ds,dx
+	mov ah,12h
+	mov bl,36h
+	mov al,0
+	int 10h
+ende:   ret
+loadpicture endp
+
+
+

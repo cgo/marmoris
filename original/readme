@@ -1,0 +1,28 @@
+Tabelle der Tastaturbelegung:
+
+Im Spiel:
+
+Cursortasten:   Figurbewegung
+PageUp: Karte des Levels
+Home:   Neubeginn
+Insert:  -> Editor
+Return: Spieler umschalten
+F1:     Level laden (Auswahl mit Freizeichen/laden mit Return)
+
+
+Editor:
+
+Cursortasten:   Steinbewegung
+Control+Cursortasten links/rechts bzw. Mausklick:   Stein auswÑhlen
+w / y / a / s:   gro·er Schritt (8 Felder weiter)
+Delete: Level lîschen
+End:    -> Spielmodus
+Return bzw. rechte Maustaste: Feld lîschen
+Freizeichen bzw. linke Maustaste:       Feld setzen
+F1:     Level laden     (Auswahl mit Freizeichen/laden mit Return)
+F2:     Level speichern
+F3:     Anzahl der Reiheverschiebungen festlegen
+        (2 Ziffern oder Return fÅr keine Begrenzung)
+F4:     Randbegrenzung setzen/lîschen
+        Die Randbegrenzung besteht aus Monolit-Steinen, die 
+        jedoch auch nach Reihenberschiebungen NICHT bewegt werden kînnen

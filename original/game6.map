@@ -1,0 +1,14 @@
+
+
+Warning: no stack segment
+
+ Start  Stop   Length Name                   Class
+ 00000H 0F7E7H 0F7E8H CODE                   
+Fixup offset exceeds field width near B14B in GAME6.OBJ(game6.ASM) offset 63FH
+Fixup offset exceeds field width near DBE0 in GAME6.OBJ(game6.ASM) offset 2C41H
+Fixup offset exceeds field width near DC1C in GAME6.OBJ(game6.ASM) offset 2C60H
+Fixup offset exceeds field width near F4F7 in GAME6.OBJ(game6.ASM) offset 65F8H
+Fixup offset exceeds field width near F52E in GAME6.OBJ(game6.ASM) offset 660BH
+Fixup offset exceeds field width near F574 in GAME6.OBJ(game6.ASM) offset 661CH
+
+Program entry point at 0000:0000

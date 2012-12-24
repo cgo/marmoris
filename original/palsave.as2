@@ -1,0 +1,41 @@
+code segment
+	assume cs:code,ds:code
+entry:	jmp marke
+puffer  db 800 dup (0)
+handle dw 0
+speicher dw 0
+stext	db 'CMAP'
+dateiname db 'c:\compiler\marmoris\palette',0
+marke:  mov dx,code
+	mov ds,dx
+writecol:
+	mov dx,code
+	mov es,dx
+	mov ah,10h
+	mov al,17h
+	mov bx,0
+	mov cx,256
+	mov dx,offset puffer
+	int 10h
+
+	mov ah,3ch
+	mov dx,offset dateiname
+	mov cx,0
+	int 21h
+	jc ende
+	mov handle,ax
+	mov ah,64
+	mov bx,handle
+	mov cx,765
+	mov dx,offset puffer
+	int 21h
+	mov ah,3eh
+	mov bx,handle
+	int 21h
+ende:
+        mov ah,4ch
+	int 21h
+code ends
+	end entry
+
+

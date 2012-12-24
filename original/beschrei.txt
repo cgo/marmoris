@@ -1,0 +1,84 @@
+Beschreibung von Marmoris:
+
+Bei dem Spiel geht es darum, alle Goldmnzen einzusammeln, sich den Koffer
+zu greifen und mit diesem auf eine Sdseeinsel zu fliehen.
+Um eine šbersicht ber das Level zu bekommen, drcken Sie
+<PageUp>, eine weitere Taste, um sie wieder
+verschwinden zu lassen. Geladen werden die Level mit <F1>, dann mit
+<Space> ausw„hlen, und mit <Return> laden.
+
+Es gibt 2 Spielfiguren (blau und grn, wir nennen sie Heinz und Harry),
+zwischen denen man mit RETURN umschalten kann
+(fr manche Level braucht man beide Spielfiguren).
+Nun gab es da zwei gemeine Programmierer, die den beiden ein paar Hindernisse
+in den Weg gelegt haben...da gibt es die Mauern, fehlende Marmorplatten, 
+Flsse, die grauen Monolitbl”cke (die sich verschieben lassen), deren blaue
+Ebenbilder, die aus dem Bewegen gar nicht mehr rauskommen (sie rutschen so 
+lange weiter, bis sie auf ein Hindernis stoáen) und Ersatzmarmorplatten, mit
+denen man die fehlenden ersetzen kann, die aber auch zum Hindernis werden 
+k”nnen (wenn zwei oder mehr hintereinander liegen, k”nnen sie nicht mehr
+verschoben werden).
+Einzelne Mauerstcke k”nnen mit einem Glas S„ure aufgel”st werden, die L”cher
+k”nnen (wie oben schon erw„hnt) mit Ersatzplatten gestopft werden; an Flssen
+ist nicht vorbeizukommen. Desweiteren gibt es in dem Spiel lose
+Marmorplatten, ber die man nur einmal gehen kann, danach befindet sich an 
+der betreffenden Stelle ein Loch, das natrlich mit einer Ersatzplatte 
+ausgebessert werden kann.
+Die grauen Monolit-Steine k”nnen zwar verschoben werden, haben jedoch keinen
+bestimmten Zweck, so daá sie leicht zum Hindernis werden k”nnen...
+Eine weitere M”glichkeit die Level zu variieren ist, ganze Reihen von
+Steinen zu verschieben (horizontal oder vertikal). Das geschieht aber nur
+im momentan sichtbaren Bereich des Spielfeldes. Ausgel”st wird eine solche
+Verschiebung durch das Feld mit den 4 kleinen roten Pfeilen, der Zeiger
+am Rand des Spielfeldes (der die Zeile oder Spalte anzeigt, die verschoben 
+wird) wird mit dem groáen roten Pfeil bewegt (einmaliges Betreten
+des Feldes bewirkt die Verschiebung des Zeigers um ein Feld im
+Uhrzeigersinn). Die Anzahl der m”glichen Verschiebungen (durch die kleinen
+Pfeile) wird im Editor festgelegt - womit wir auch schon beim n„chsten Punkt
+w„ren, n„mlich dem Editor. Er erm”glicht es, neue Level zu erstellen
+(oder alte zu editieren). 
+Wenn Sie eine maus installiert haben, werden Sie zu Anfang vor Start des 
+Spiels gefragt, ob Sie diese im Marmoris Editor benutzen m”chten.
+Wenn Sie mit Maussteuerung arbeiten, klicken Sie einfach das Icon, das sie
+auf ein Spielfeld setzen wollen an, bewegen den Mauszeiger auf das Spiel-
+feld und klicken wiederum auf ein Marmorfeld. Probieren Sie den Editor 
+einfach mal aus, es ist gar nicht so schwer, eigene kleine Level zu 
+erstellen.
+Wenn Sie keinen Maustreiber installiert haben, k”nnen Sie selbstverst„ndlich
+auch ber Tastatur steuern, die genaue Belegung entnehmen sie bitte der
+unten stehenden Tabelle.
+In der PC Version konnte ich leider keinen Sound einbinden, da ich keine
+Soundkarte besitze; einzige Ger„usche sind ein Brummton wenn man die Figur
+nicht weiter bewegen kann und ein Piepson wenn man eine Mnze einsammelt.
+Ach ja: Falls Bedarf besteht ist auch noch eine Amiga Version verfgbar !!
+
+
+
+Tabelle der Tastaturbelegung:
+
+Im Spiel:
+
+Cursortasten:   Figurbewegung
+PageUp: Karte des Levels
+Home:   Neubeginn
+Insert:  -> Editor
+Return: Spieler umschalten
+F1:     Level laden (Auswahl mit Freizeichen/laden mit Return)
+
+
+Editor:
+
+Cursortasten:   Steinbewegung
+Control+Cursortasten links/rechts bzw. Mausklick:   Stein ausw„hlen
+w / y / a / s:   groáer Schritt (8 Felder weiter)
+Delete: Level l”schen
+End:    -> Spielmodus
+Return bzw. rechte Maustaste: Feld l”schen
+Freizeichen bzw. linke Maustaste:       Feld setzen
+F1:     Level laden     (Auswahl mit Freizeichen/laden mit Return)
+F2:     Level speichern
+F3:     Anzahl der Reiheverschiebungen festlegen
+        (2 Ziffern oder Return fr keine Begrenzung)
+F4:     Randbegrenzung setzen/l”schen
+        Die Randbegrenzung besteht aus Monolit-Steinen, die 
+        jedoch auch nach Reihenberschiebungen NICHT bewegt werden k”nnen
