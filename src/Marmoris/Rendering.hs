@@ -5,7 +5,7 @@ import Data.Array.Repa.Repr.ForeignPtr (toForeignPtr)
 import qualified Marmoris.Field as F
 import Marmoris.Image
 import Marmoris.Field (Field(..))
-import Control.Monad (zipWithM, zipWithM_)
+import Control.Monad (zipWithM, zipWithM_,when)
 import Data.Array.MArray
 import Data.Array
 import Data.Word (Word8)
@@ -26,10 +26,10 @@ quad (SPosition x y) (SSize w h) =
 
 
 stoneTextureCoords :: [TexCoord2 GLfloat]
-stoneTextureCoords = [TexCoord2 0 0
-                     ,TexCoord2 1 0
+stoneTextureCoords = [TexCoord2 0 1
                      ,TexCoord2 1 1
-                     ,TexCoord2 0 1]
+                     ,TexCoord2 1 0
+                     ,TexCoord2 0 0]
 
 
 type StoneTextures = [(F.StoneID, TextureObject)]
@@ -41,6 +41,15 @@ defineStoneTextures :: Field -> IO StoneTextures
 defineStoneTextures f = do
   let sd = stoneData f
       n  = length $ elems sd
+      
+  texture Texture2D $= Enabled
+  activeTexture $= TextureUnit 0
+  textureWrapMode Texture2D S $= (Repeated, Clamp)
+  textureWrapMode Texture2D T $= (Repeated, Clamp)
+  textureWrapMode Texture2D R $= (Repeated, Clamp)
+  textureFilter Texture2D $= ((Nearest, Nothing), Nearest) -- This is essential!
+  generateMipmap Texture2D $= Disabled
+
   texNames <- genObjectNames n 
   zipWithM defTex (elems sd) texNames
   where defTex s@(F.Stone img sid) name = do
@@ -57,7 +66,7 @@ bindImage img = do
   fp <- imgToPixelData img
   let (w,h) = imageSize img
   withForeignPtr fp $ \ptr -> do
-    let pd = PixelData RGBA Byte ptr
+    let pd = PixelData RGBA UnsignedByte ptr
     texImage2D Nothing NoProxy 0 RGBA8 (TextureSize2D (fromIntegral w) (fromIntegral h)) 0 pd
 
 
@@ -65,37 +74,56 @@ imgToPixelData :: RGBAImg -> IO (ForeignPtr Word8)
 imgToPixelData img = do
   let (w,h) = imageSize img
       sz = w * h * 4
-  --p <- mallocForeignPtrArray sz :: IO (ForeignPtr Word8)
-  --let a = fromForeignPtr (Z :. h :. w :. 4) p
   toForeignPtr `fmap` R.copyP img
   
-  -- return $ PixelData RGBA Byte ptr
+
+initRendering :: IO ()
+initRendering = do
+  clearColor $= Color4 0 0 0 1
+  clear [ColorBuffer, DepthBuffer]
+  matrixMode $= Projection
+  loadIdentity
+  ortho2D 0 1 0 1  
+  matrixMode $= Modelview 0
+  loadIdentity
+
 
 
 renderStone :: TextureObject -> SPosition -> SSize -> IO ()
 renderStone name p s = do
   texture Texture2D $= Enabled
   textureBinding Texture2D $= Just name
+  textureFilter Texture2D $= ((Nearest, Nothing), Nearest)
+  textureFunction $= Decal
+  glGetError >>= \e -> when (e /= 0) $ print ("renderStone: " ++ show e)
   renderPrimitive Quads $ do
-    color $ Color4 0 0 1 (1::GLfloat)
+    -- color $ Color4 0 0 1 (1::GLfloat)
+    -- normal $ Normal3 0 0 (1::GLfloat)
     zipWithM_ (\a b -> texCoord a >> vertex b) stoneTextureCoords (quad p s)
+  texture Texture2D $= Disabled
 {-# INLINE renderStone #-}
 
 -- Render all the stones to a canonical plane (which will be transformed by
 -- the modelview matrix).
 renderField :: StoneTextures -> Field -> IO ()
 renderField stex (Field farray fstoneData fppos) = do
-  texture Texture2D $= Enabled
   preservingMatrix $ do
     ((h0,w0),(h1,w1)) <- getBounds farray
     matrixMode $= Modelview 0
+    let tx = fromIntegral (w1 - w0 + 1) / 2
+        ty = fromIntegral (h1 - h0 + 1) / 2
+    translate $ Vector3 0.5 0.5 (0 :: GLfloat)
     scale
       (0.75 * 1 / fromIntegral (w1 - w0 + 1))
       (0.75 * 1 / fromIntegral (h1 - h0 + 1))
       (1 :: GLfloat)    
+    translate $ Vector3 (-tx) (-ty) (0 :: GLfloat)
     as <- getAssocs farray
     mapM_ (\((x,y), b) -> let pos = SPosition (fromIntegral x) (fromIntegral y)
                           in renderStone (stl b) pos (SSize 1 1)) as
+    pp <- getElems fppos >>= return . map (\(x,y) -> SPosition (fromIntegral x) (fromIntegral y))
+    zipWithM_ (\a p -> renderStone (stl (F.toStoneID a)) p (SSize 1 1)) [F.Player1,F.Player2] pp
+    flush
       where
         defaultTexture = TextureObject 0
         stl = maybe defaultTexture id . lookupStoneTexture stex

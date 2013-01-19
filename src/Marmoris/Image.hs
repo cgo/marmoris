@@ -1,3 +1,5 @@
+{-# LANGUAGE BangPatterns #-}
+
 module Marmoris.Image
        ( Img, 
          RGBAImg,
@@ -41,4 +43,9 @@ loadRGBAImg fname = ilInit >>
                     readImage fname >>= \i ->
                     let (_,(h,w,c)) = bounds i
                         s = R.Z R.:. (h+1) R.:. (w+1) R.:. (c+1)
-                    in return $ fromList s $ elems i
+                        setAlpha a = setAlpha' a 3
+                        setAlpha' [] _ = []
+                        setAlpha' s@(a:as) !n | n == 0    = 255 : setAlpha' as 3
+                                              | otherwise = a : setAlpha' as (n-1)
+                    in return $ fromList s $ setAlpha (elems i)
+

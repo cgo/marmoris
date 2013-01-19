@@ -2,12 +2,16 @@
 
 module Marmoris.Field 
        ( StoneID,
+         toStoneID,
+         fromStoneID,
+         StoneType(..),
          Position,
          FieldArray,
          Field(..),
          Stone(..),
          loadStones,
          loadField,
+         makeEmptyField,
          module Data.Word, 
          module Data.Array.IO )  
        where
@@ -25,16 +29,26 @@ type FieldArray = IOUArray Position StoneID
 
 data Field = Field { fieldData :: FieldArray,
                      stoneData :: Array StoneID Stone,
-                     playerPositions :: Array Int Position }
+                     playerPositions :: IOArray Int Position }
              
 type StoneID = Int
              
 data Stone = Stone { stoneImg :: RGBAImg, 
                      stoneID :: !StoneID } deriving (Show, Eq)
 
+makeEmptyField :: IO Field
+makeEmptyField = do
+  fd <- newListArray ((0,0),(4,4)) $ repeat 1
+  stones <- loadStones
+  pp <- newListArray (0,1) [(0,0),(0,1)]
+  return $ Field { fieldData = fd
+                 , stoneData = listArray (1,length stones) stones
+                 , playerPositions = pp }
+
 data StoneType = Regular
                | Acid
-               | River
+               | RiverLR
+               | RiverRL
                | Wall
                | ReplacementTile
                | Empty
@@ -48,8 +62,14 @@ data StoneType = Regular
                | Player2
                  deriving (Eq, Show, Enum, Ord)
 
+toStoneID :: StoneType -> StoneID
+toStoneID = (+1) . fromEnum
+
+fromStoneID :: StoneID -> StoneType
+fromStoneID = toEnum . subtract 1
+
 loadStones :: IO [Stone]
-loadStones = sortBy (\(Stone _ n1) (Stone _ n2) -> if (n1 < n2) then LT else if (n1 > n2) then GT else EQ) `fmap`
+loadStones = sortBy (\(Stone _ n1) (Stone _ n2) -> compare n1 n2) `fmap`
              mapM f [1,2..42]
   where
     f n = loadRGBAImg (show n ++ ".bmp") >>= \s -> return (Stone s n)
@@ -60,10 +80,10 @@ loadField :: FilePath -> IO Field
 loadField levelName = do
   stones <- loadStones  
   fieldArray <- loadOldLevel levelName
-  pos <- loadOldPlayerPositions levelName
+  pos <- loadOldPlayerPositions levelName >>= newListArray (0,1)
   return $ Field { fieldData = fieldArray,
-                   stoneData = listArray (0, length stones - 1) stones,
-                   playerPositions = listArray (0,1) pos }
+                   stoneData = listArray (1, length stones) stones,
+                   playerPositions = pos }
                              
                              
 {-| Load a level from the original X86 ASM game. -}
