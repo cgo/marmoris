@@ -27,7 +27,7 @@ type Position = (Int,Int)
 
 type FieldArray = IOUArray Position StoneID
 
-data Field = Field { fieldData :: FieldArray,
+data Field = Field { fieldData :: !FieldArray,
                      stoneData :: Array StoneID Stone,
                      playerPositions :: IOArray Int Position }
              
